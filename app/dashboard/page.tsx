@@ -1,18 +1,25 @@
 import { createClient } from '@/lib/supabase/server'
+import { getOrCreateProfile } from '@/lib/supabase/profile'
 import { redirect } from 'next/navigation'
 import AppShell from '@/components/layout/AppShell'
 import DailyChecklistForm from '@/components/dashboard/DailyChecklistForm'
 import { todayISO } from '@/lib/utils'
 import { getPhaseFromWeek, PHASE_COLORS, PROTOCOL_LABELS, PROTOCOL_LINKS } from '@/lib/program'
-import type { Profile, DailyReport, ProtocolFlags } from '@/lib/types'
+import type { DailyReport, ProtocolFlags } from '@/lib/types'
 
 export default async function DashboardPage() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/')
 
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-  if (!profile) redirect('/')
+  const profile = await getOrCreateProfile(user.id, user.email!)
+  if (!profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-500">Eroare la încărcarea profilului. Reîncarcă pagina.</p>
+      </div>
+    )
+  }
 
   const today = todayISO()
   const { data: todayReport } = await supabase
@@ -29,9 +36,8 @@ export default async function DashboardPage() {
     .map(([k]) => k as keyof ProtocolFlags)
 
   return (
-    <AppShell>
+    <AppShell profile={profile}>
       <div className="space-y-6">
-        {/* Greeting */}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
@@ -47,7 +53,6 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Protocoale active */}
         {activeFlags.length > 0 && (
           <div className="card bg-amber-50 border-amber-100">
             <p className="text-sm font-semibold text-amber-800 mb-2">Protocoale personalizate active:</p>
@@ -67,9 +72,8 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        {/* Checklist */}
         <DailyChecklistForm
-          profile={profile as Profile}
+          profile={profile}
           existingReport={todayReport as DailyReport | null}
         />
       </div>

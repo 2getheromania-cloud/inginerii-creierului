@@ -31,11 +31,11 @@ export default function MealSection({ title, icon, isSnack = false, checks, reci
   const items = isSnack ? SNACK_ITEMS : MEAL_ITEMS
 
   function toggle(key: string) {
-    onChange({ ...checks, [key]: !(checks as Record<string, unknown>)[key] } as MealChecks | SnackChecks)
+    onChange({ ...(checks as unknown as Record<string, boolean>), [key]: !(checks as unknown as Record<string, boolean>)[key] } as unknown as MealChecks | SnackChecks)
   }
 
   const total = items.length
-  const done = items.filter(i => (checks as Record<string, unknown>)[i.key]).length
+  const done = items.filter(i => (checks as unknown as Record<string, boolean>)[i.key]).length
 
   return (
     <div className="border border-gray-100 rounded-xl overflow-hidden">
@@ -66,7 +66,7 @@ export default function MealSection({ title, icon, isSnack = false, checks, reci
 
       <div className="divide-y divide-gray-50">
         {items.map(item => {
-          const checked = !!(checks as Record<string, unknown>)[item.key]
+          const checked = !!(checks as unknown as Record<string, boolean>)[item.key]
           return (
             <label
               key={item.key}

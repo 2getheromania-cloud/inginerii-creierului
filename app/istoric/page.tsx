@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getOrCreateProfile } from '@/lib/supabase/profile'
 import { redirect } from 'next/navigation'
 import AppShell from '@/components/layout/AppShell'
 import IstoricClient from '@/components/istoric/IstoricClient'
@@ -9,6 +10,9 @@ export default async function IstoricPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/')
 
+  const profile = await getOrCreateProfile(user.id, user.email!)
+  if (!profile) redirect('/')
+
   const { data: reports } = await supabase
     .from('daily_reports')
     .select('*')
@@ -17,7 +21,7 @@ export default async function IstoricPage() {
     .limit(90)
 
   return (
-    <AppShell>
+    <AppShell profile={profile}>
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-gray-900">Istoric & Progres</h1>
         <IstoricClient reports={(reports ?? []) as DailyReport[]} />

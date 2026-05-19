@@ -33,7 +33,7 @@ export default function ProgressChart({ reports, type = 'line', days = 30 }: Pro
   if (type === 'bar') {
     // Completion % per day
     const data = sorted.map(r => {
-      const checks = r.checks as Record<string, unknown>
+      const checks = r.checks as unknown as Record<string, unknown>
       let total = 0, done = 0
       const countObj = (obj: Record<string, unknown>) => {
         for (const v of Object.values(obj)) {

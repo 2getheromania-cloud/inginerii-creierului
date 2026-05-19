@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getOrCreateProfile } from '@/lib/supabase/profile'
 import { redirect } from 'next/navigation'
 import AppShell from '@/components/layout/AppShell'
 import NotificariClient from '@/components/admin/NotificariClient'
@@ -9,23 +10,16 @@ export default async function NotificariPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/')
 
-  const { data: myProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (myProfile?.role !== 'admin') redirect('/dashboard')
+  const profile = await getOrCreateProfile(user.id, user.email!)
+  if (!profile || profile.role !== 'admin') redirect('/dashboard')
 
-  const { data: cursanti } = await supabase
-    .from('profiles')
-    .select('id, name, email')
-    .eq('role', 'cursant')
-    .order('name', { ascending: true })
-
-  const { data: recent } = await supabase
-    .from('notifications')
-    .select('*')
-    .order('sent_at', { ascending: false })
-    .limit(20)
+  const [{ data: cursanti }, { data: recent }] = await Promise.all([
+    supabase.from('profiles').select('id, name, email').eq('role', 'cursant').order('name'),
+    supabase.from('notifications').select('*').order('sent_at', { ascending: false }).limit(20),
+  ])
 
   return (
-    <AppShell>
+    <AppShell profile={profile}>
       <div className="space-y-8">
         <h1 className="text-2xl font-bold text-gray-900">Notificări</h1>
         <NotificariClient

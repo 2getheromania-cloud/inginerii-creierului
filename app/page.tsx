@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import LoginForm from '@/components/auth/LoginForm'
 import { PROGRAM_PHASES } from '@/lib/program'
 
@@ -48,7 +49,9 @@ export default function HomePage() {
 
           {/* Right — login */}
           <div className="flex justify-center">
-            <LoginForm />
+            <Suspense fallback={<div className="card max-w-sm w-full h-48 animate-pulse bg-gray-100 rounded-2xl" />}>
+              <LoginForm />
+            </Suspense>
           </div>
         </div>
 

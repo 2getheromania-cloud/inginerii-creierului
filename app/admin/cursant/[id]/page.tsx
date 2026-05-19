@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getOrCreateProfile } from '@/lib/supabase/profile'
 import { redirect, notFound } from 'next/navigation'
 import AppShell from '@/components/layout/AppShell'
 import ProgressChart from '@/components/charts/ProgressChart'
@@ -14,52 +15,40 @@ export default async function AdminCursantPage({ params }: { params: { id: strin
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/')
 
-  const { data: myProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (myProfile?.role !== 'admin') redirect('/dashboard')
+  const myProfile = await getOrCreateProfile(user.id, user.email!)
+  if (!myProfile || myProfile.role !== 'admin') redirect('/dashboard')
 
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', params.id).single()
-  if (!profile) notFound()
+  const { data: cursantProfile } = await supabase.from('profiles').select('*').eq('id', params.id).single()
+  if (!cursantProfile) notFound()
 
-  const { data: reports30 } = await supabase
-    .from('daily_reports')
-    .select('*')
-    .eq('user_id', params.id)
-    .order('date', { ascending: false })
-    .limit(30)
+  const [{ data: reports30 }, { data: reports7 }] = await Promise.all([
+    supabase.from('daily_reports').select('*').eq('user_id', params.id).order('date', { ascending: false }).limit(30),
+    supabase.from('daily_reports').select('*').eq('user_id', params.id).order('date', { ascending: false }).limit(7),
+  ])
 
-  const { data: reports7 } = await supabase
-    .from('daily_reports')
-    .select('*')
-    .eq('user_id', params.id)
-    .order('date', { ascending: false })
-    .limit(7)
-
-  const phase = getPhaseFromWeek(profile.week)
-  const activeFlags = Object.entries(profile.flags as ProtocolFlags)
+  const phase = getPhaseFromWeek(cursantProfile.week)
+  const activeFlags = Object.entries(cursantProfile.flags as ProtocolFlags)
     .filter(([, v]) => v).map(([k]) => k as keyof ProtocolFlags)
 
   return (
-    <AppShell>
+    <AppShell profile={myProfile}>
       <div className="space-y-8">
-        {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <Link href="/admin" className="text-sm text-gray-400 hover:text-gray-600 mb-2 inline-block">
               ← Înapoi la admin
             </Link>
-            <h1 className="text-2xl font-bold text-gray-900">{profile.name || profile.email}</h1>
-            <p className="text-gray-500">{profile.email}</p>
+            <h1 className="text-2xl font-bold text-gray-900">{cursantProfile.name || cursantProfile.email}</h1>
+            <p className="text-gray-500">{cursantProfile.email}</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <span className={cn('badge text-sm px-3 py-1', PHASE_COLORS[phase])}>{phase}</span>
-            <span className="badge bg-gray-100 text-gray-700 text-sm px-3 py-1">Săpt. {profile.week}/24</span>
+            <span className="badge bg-gray-100 text-gray-700 text-sm px-3 py-1">Săpt. {cursantProfile.week}/24</span>
           </div>
         </div>
 
-        {/* Info + editare */}
-        <AdminCursantClient profile={profile as Profile} />
+        <AdminCursantClient profile={cursantProfile as Profile} />
 
-        {/* Protocoale */}
         {activeFlags.length > 0 && (
           <div className="card">
             <h3 className="font-semibold mb-3">Protocoale active</h3>
@@ -71,7 +60,6 @@ export default async function AdminCursantPage({ params }: { params: { id: strin
           </div>
         )}
 
-        {/* Grafice 7 zile */}
         <div className="card">
           <h3 className="font-semibold mb-4">Ultimele 7 zile — indicatori</h3>
           {(reports7?.length ?? 0) > 0
@@ -80,7 +68,6 @@ export default async function AdminCursantPage({ params }: { params: { id: strin
           }
         </div>
 
-        {/* Grafice 30 zile */}
         <div className="card">
           <h3 className="font-semibold mb-4">Ultimele 30 zile — completare checklist</h3>
           {(reports30?.length ?? 0) > 0
@@ -89,7 +76,6 @@ export default async function AdminCursantPage({ params }: { params: { id: strin
           }
         </div>
 
-        {/* Rapoarte recente */}
         <div className="card">
           <h3 className="font-semibold mb-4">Rapoarte recente (30 zile)</h3>
           {(reports30?.length ?? 0) === 0 ? (

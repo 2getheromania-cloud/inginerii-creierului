@@ -1,13 +1,21 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 export default function LoginForm() {
-  const [email, setEmail] = useState('')
+  const [email, setEmail]   = useState('')
   const [loading, setLoading] = useState(false)
-  const [sent, setSent] = useState(false)
-  const [error, setError] = useState('')
+  const [sent, setSent]     = useState(false)
+  const [error, setError]   = useState('')
+  const searchParams = useSearchParams()
   const supabase = createClient()
+
+  // Preia eroarea din URL (?error=...) setată de callback
+  useEffect(() => {
+    const urlError = searchParams.get('error')
+    if (urlError) setError(decodeURIComponent(urlError))
+  }, [searchParams])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -67,7 +75,18 @@ export default function LoginForm() {
         </div>
 
         {error && (
-          <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+          <div className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">
+            {error}
+            {error.includes('expirat') && (
+              <button
+                type="button"
+                onClick={() => setError('')}
+                className="block mt-1 underline text-xs"
+              >
+                Solicită un link nou →
+              </button>
+            )}
+          </div>
         )}
 
         <button type="submit" className="btn-primary w-full" disabled={loading}>
