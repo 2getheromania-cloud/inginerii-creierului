@@ -1,12 +1,17 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 const FROM = 'Inginerii Creierului <noreply@ingineriicreierului.ro>'
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.ingineriicreierului.ro'
+
+function client() {
+  return new Resend(process.env.RESEND_API_KEY)
+}
+
+function appUrl() {
+  return process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.ingineriicreierului.ro'
+}
 
 export async function sendMagicLinkEmail(email: string, link: string) {
-  return resend.emails.send({
+  return client().emails.send({
     from: FROM,
     to: email,
     subject: 'Intră în contul tău — Inginerii Creierului',
@@ -23,7 +28,7 @@ export async function sendMagicLinkEmail(email: string, link: string) {
 }
 
 export async function sendDailyReminder(email: string, name: string) {
-  return resend.emails.send({
+  return client().emails.send({
     from: FROM,
     to: email,
     subject: '⏰ Reminder: completează raportul de azi',
@@ -31,7 +36,7 @@ export async function sendDailyReminder(email: string, name: string) {
       <div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;padding:32px">
         <h2 style="color:#166534">Salut, ${name || 'cursant'}!</h2>
         <p>Nu ai completat încă raportul zilnic de astăzi. Acordă 2 minute pentru a-ți monitoriza progresul.</p>
-        <a href="${APP_URL}/dashboard" style="display:inline-block;background:#16a34a;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;margin:16px 0">
+        <a href="${appUrl()}/dashboard" style="display:inline-block;background:#16a34a;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;margin:16px 0">
           Completează raportul
         </a>
       </div>`,
@@ -49,7 +54,7 @@ export async function sendWeeklySummary(
     .map(([k, v]) => `<tr><td style="padding:4px 8px">${k}</td><td style="padding:4px 8px;font-weight:600">${v.toFixed(1)}/10</td></tr>`)
     .join('')
 
-  return resend.emails.send({
+  return client().emails.send({
     from: FROM,
     to: email,
     subject: `📊 Rezumat săptămâna ${week} — Inginerii Creierului`,
@@ -60,15 +65,20 @@ export async function sendWeeklySummary(
         <p><strong>Zile raportate:</strong> ${completedDays}/7</p>
         <h3>Medii indicatori</h3>
         <table style="border-collapse:collapse;width:100%">${sliderRows}</table>
-        <a href="${APP_URL}/istoric" style="display:inline-block;background:#16a34a;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;margin:16px 0">
+        <a href="${appUrl()}/istoric" style="display:inline-block;background:#16a34a;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;margin:16px 0">
           Vezi istoricul complet
         </a>
       </div>`,
   })
 }
 
-export async function sendInactivityAlert(adminEmail: string, cursantName: string, cursantEmail: string, daysMissed: number) {
-  return resend.emails.send({
+export async function sendInactivityAlert(
+  adminEmail: string,
+  cursantName: string,
+  cursantEmail: string,
+  daysMissed: number
+) {
+  return client().emails.send({
     from: FROM,
     to: adminEmail,
     subject: `⚠️ Inactivitate: ${cursantName || cursantEmail} (${daysMissed} zile)`,
@@ -77,7 +87,7 @@ export async function sendInactivityAlert(adminEmail: string, cursantName: strin
         <h2 style="color:#dc2626">Alertă inactivitate</h2>
         <p><strong>${cursantName || cursantEmail}</strong> nu a raportat în ultimele <strong>${daysMissed} zile</strong>.</p>
         <p>Email: ${cursantEmail}</p>
-        <a href="${APP_URL}/admin" style="display:inline-block;background:#dc2626;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;margin:16px 0">
+        <a href="${appUrl()}/admin" style="display:inline-block;background:#dc2626;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;margin:16px 0">
           Vezi în admin
         </a>
       </div>`,
@@ -85,7 +95,7 @@ export async function sendInactivityAlert(adminEmail: string, cursantName: strin
 }
 
 export async function sendManualNotification(email: string, subject: string, message: string) {
-  return resend.emails.send({
+  return client().emails.send({
     from: FROM,
     to: email,
     subject,
