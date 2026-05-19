@@ -7,14 +7,6 @@
     {
       "path": "/api/cron/weekly-summary",
       "schedule": "0 17 * * 0"
-    },
-    {
-      "path": "/api/cron/inactivity-alert",
-      "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/cron/process-scheduled",
-      "schedule": "*/15 * * * *"
     }
   ]
 }
