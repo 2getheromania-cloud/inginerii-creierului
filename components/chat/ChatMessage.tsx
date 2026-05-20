@@ -10,6 +10,7 @@ interface Props {
 
 export default function ChatMessageBubble({ message, isOwn, isAdmin, onAdminAction }: Props) {
   const { sender, body, image_url, is_announcement, is_pinned, created_at } = message
+  if (!sender) return null
   const isAdminSender = sender.role === 'admin'
   const time = new Date(created_at).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })
 
@@ -24,7 +25,7 @@ export default function ChatMessageBubble({ message, isOwn, isAdmin, onAdminActi
               <img src={image_url} alt="imagine" className="mt-2 max-h-60 rounded-lg mx-auto cursor-pointer" loading="lazy" />
             </a>
           )}
-          <p className="text-xs text-gray-400 mt-1">{time} · {sender.name || sender.email}</p>
+          <p className="text-xs text-gray-400 mt-1" suppressHydrationWarning>{time} · {sender.name || sender.email}</p>
         </div>
         {isAdmin && (
           <div className="flex gap-1 justify-center mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -71,7 +72,7 @@ export default function ChatMessageBubble({ message, isOwn, isAdmin, onAdminActi
               />
             </a>
           )}
-          <span className={`text-xs block text-right mt-1 ${isOwn ? 'text-brand-200' : 'text-gray-400'}`}>
+          <span className={`text-xs block text-right mt-1 ${isOwn ? 'text-brand-200' : 'text-gray-400'}`} suppressHydrationWarning>
             {time}
           </span>
         </div>
