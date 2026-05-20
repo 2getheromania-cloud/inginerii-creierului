@@ -26,7 +26,7 @@ async function restSignInOTP(email: string): Promise<{
       },
       body: JSON.stringify({
         email,
-        create_user: true,
+        should_create_user: true,
         // Intentionally NO code_challenge and NO redirect_to
       }),
     }
@@ -100,7 +100,7 @@ export default function LoginForm() {
       const callInfo = {
         method:  'POST',
         url:     `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/otp`,
-        body:    { email: emailClean, create_user: true },
+        body:    { email: emailClean, should_create_user: true },
         note:    'REST — no SDK, no code_challenge, no redirect_to',
         ts:      new Date().toISOString(),
       }
@@ -141,46 +141,27 @@ export default function LoginForm() {
     setVerifyDbg(null)
 
     const emailClean = email.trim().toLowerCase()
-    const types = ['email', 'magiclink', 'signup'] as const
 
-    const attempts: Array<{
-      type: string
-      ok: boolean
-      status: number
-      error: string | null
-      hasSession: boolean
-      rawBody: Record<string, unknown>
-    }> = []
-
-    let successTokens: { access_token: string; refresh_token: string } | null = null
-
-    for (const type of types) {
-      const { ok, status, body, session } = await restVerifyOTP(emailClean, token, type)
-      const attempt = {
-        type,
-        ok:         ok && !!session,
-        status,
-        error:      ok && session ? null : String(body.message ?? body.error_description ?? body.error ?? '—'),
-        hasSession: !!session,
-        rawBody:    body,
-      }
-      attempts.push(attempt)
-      console.log('[OTP] verify attempt', attempt)
-
-      if (session) {
-        successTokens = session
-        break
-      }
+    // Template Supabase conține doar {{ .Token }} → type:'email' este singurul tip valid
+    const { ok, status, body, session } = await restVerifyOTP(emailClean, token, 'email')
+    const attempt = {
+      type:       'email',
+      ok:         ok && !!session,
+      status,
+      error:      ok && session ? null : String(body.message ?? body.error_description ?? body.error ?? '—'),
+      hasSession: !!session,
+      rawBody:    body,
     }
+    console.log('[OTP] verify', attempt)
 
-    const dbg = { email: emailClean, token, tokenLength: token.length, attempts }
+    const dbg = { email: emailClean, token, tokenLength: token.length, attempt }
     setVerifyDbg(dbg)
-    console.log('[OTP] verify summary', dbg)
+
+    const successTokens = session
 
     if (!successTokens) {
       setLoading(false)
-      const lastErr = attempts[attempts.length - 1]?.error ?? 'Eroare necunoscută'
-      setError(`Toate tipurile au eșuat. Ultimul: ${lastErr}`)
+      setError(`Cod invalid sau expirat. (${attempt.error})`)
       return
     }
 
