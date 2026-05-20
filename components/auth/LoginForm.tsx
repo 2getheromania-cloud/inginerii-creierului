@@ -26,7 +26,6 @@ export default function LoginForm() {
   const [sent, setSent]     = useState(false)
   const [error, setError]   = useState('')
   const [isIOS, setIsIOS]   = useState(false)
-  const [redirectTo, setRedirectTo] = useState('')
 
   const searchParams = useSearchParams()
   const supabase     = createClient()
@@ -46,24 +45,18 @@ export default function LoginForm() {
     const emailClean = email.trim().toLowerCase()
 
     if (isIOS) {
-      const callbackUrl = `${window.location.origin}/auth/implicit-callback`
-      setRedirectTo(callbackUrl)
-
       const { error: err } = await getImplicitClient().auth.signInWithOtp({
         email: emailClean,
-        options: { emailRedirectTo: callbackUrl },
+        options: { emailRedirectTo: `${window.location.origin}/auth/implicit-callback` },
       })
 
       setLoading(false)
       if (err) { setError(err.message); return }
       setSent(true)
     } else {
-      const url = `${window.location.origin}/auth/confirm`
-      setRedirectTo(url)
-
       const { error: err } = await supabase.auth.signInWithOtp({
         email: emailClean,
-        options: { emailRedirectTo: url },
+        options: { emailRedirectTo: `${window.location.origin}/auth/confirm` },
       })
 
       setLoading(false)
@@ -83,12 +76,6 @@ export default function LoginForm() {
           Click pe link pentru a intra în cont.
         </p>
         <p className="text-xs text-gray-400">Link-ul expiră în 1 oră.</p>
-        {redirectTo && (
-          <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-3 text-left">
-            <p className="text-xs font-semibold text-gray-500 mb-1">Debug — redirect URL:</p>
-            <p className="text-xs font-mono text-gray-700 break-all">{redirectTo}</p>
-          </div>
-        )}
         <button
           onClick={() => { setSent(false); setEmail('') }}
           className="mt-4 text-brand-600 text-sm hover:underline"
