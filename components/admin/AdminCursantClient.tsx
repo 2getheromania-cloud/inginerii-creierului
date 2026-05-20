@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { PROTOCOL_LABELS } from '@/lib/program'
 import type { Profile, ProtocolFlags } from '@/lib/types'
@@ -12,6 +13,7 @@ export default function AdminCursantClient({ profile }: { profile: Profile }) {
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
   const supabase = createClient()
+  const router   = useRouter()
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
@@ -24,7 +26,8 @@ export default function AdminCursantClient({ profile }: { profile: Profile }) {
     setSaving(false)
     if (err) { setError(err.message); return }
     setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
+    // Re-render server component so phase badge + Resurse curente reflect updated week/flags
+    setTimeout(() => { router.refresh() }, 1000)
   }
 
   return (
@@ -61,8 +64,14 @@ export default function AdminCursantClient({ profile }: { profile: Profile }) {
 
         {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
 
-        <button type="submit" className="btn-primary" disabled={saving}>
-          {saving ? 'Se salvează...' : saved ? 'Salvat ✓' : 'Salvează modificările'}
+        {saved && (
+          <p className="text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2 font-medium">
+            ✓ Profil actualizat cu succes — pagina se reîncarcă...
+          </p>
+        )}
+
+        <button type="submit" className="btn-primary" disabled={saving || saved}>
+          {saving ? 'Se salvează...' : 'Salvează modificările'}
         </button>
       </form>
     </div>
