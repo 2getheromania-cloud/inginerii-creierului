@@ -148,11 +148,7 @@ export default function ChatClient({ initialMessages, userId, userRole }: Props)
   async function confirmDelete(id: string) {
     setConfirmDeleteId(null)
     setActionError(null)
-    const res = await fetch(`/api/chat/messages/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ deleted: true }),
-    })
+    const res = await fetch(`/api/chat/messages/${id}`, { method: 'DELETE' })
     if (!res.ok) {
       const data = await res.json().catch(() => ({}))
       setActionError(data.error ?? 'Eroare la ștergerea mesajului.')
