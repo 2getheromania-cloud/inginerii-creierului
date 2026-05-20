@@ -78,6 +78,18 @@ export interface Notification {
   sent_at: string
 }
 
+export interface AdminMessage {
+  id: string
+  title: string
+  body: string
+  video_url: string | null
+  target_type: 'all' | 'phase' | 'protocol'
+  target_value: string | null
+  is_active: boolean
+  published_at: string
+  created_at: string
+}
+
 export type ProgramPhase =
   | 'Detox 21'
   | 'Tranziție'

@@ -37,3 +37,20 @@ export function getSliderColor(value: number): string {
   if (value <= 6) return 'text-yellow-500'
   return 'text-green-500'
 }
+
+export function getVideoEmbedUrl(url: string): string | null {
+  try {
+    const u = new URL(url)
+    if (u.hostname.includes('youtube.com') && u.searchParams.get('v'))
+      return `https://www.youtube.com/embed/${u.searchParams.get('v')}`
+    if (u.hostname === 'youtu.be')
+      return `https://www.youtube.com/embed${u.pathname}`
+    if (u.hostname.includes('vimeo.com')) {
+      const m = u.pathname.match(/\/(\d+)/)
+      if (m) return `https://player.vimeo.com/video/${m[1]}`
+    }
+    if (u.hostname.includes('loom.com') && u.pathname.startsWith('/share/'))
+      return `https://www.loom.com/embed/${u.pathname.replace('/share/', '')}`
+  } catch {}
+  return null
+}

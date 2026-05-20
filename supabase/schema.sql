@@ -189,6 +189,58 @@ CREATE INDEX IF NOT EXISTS idx_scheduled_notifications_scheduled
   WHERE sent = FALSE;
 
 -- ============================================================
+-- ADMIN MESSAGES
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.admin_messages (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title        TEXT NOT NULL,
+  body         TEXT NOT NULL,
+  video_url    TEXT,
+  -- 'all' | 'phase' | 'protocol'
+  target_type  TEXT NOT NULL DEFAULT 'all' CHECK (target_type IN ('all', 'phase', 'protocol')),
+  -- phase name (e.g. 'Faza 1') or protocol key (e.g. 'tiroida') — null when target_type='all'
+  target_value TEXT,
+  is_active    BOOLEAN NOT NULL DEFAULT TRUE,
+  published_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.admin_messages ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "admin_messages_admin" ON public.admin_messages
+  FOR ALL USING (public.is_admin());
+
+-- Cursants can read active, published messages (target filtering done in application layer)
+CREATE POLICY "admin_messages_cursant_read" ON public.admin_messages
+  FOR SELECT USING (is_active = TRUE AND published_at <= NOW());
+
+CREATE INDEX IF NOT EXISTS idx_admin_messages_active
+  ON public.admin_messages (is_active, published_at DESC);
+
+-- ============================================================
+-- GROUP STATS FUNCTION (for motivational card — SECURITY DEFINER
+-- to allow cursants to see aggregate data without exposing individual records)
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.get_group_stats_last7()
+RETURNS jsonb
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT jsonb_build_object(
+    'avg_reports', ROUND(COALESCE(AVG(cnt), 0), 1),
+    'max_reports', COALESCE(MAX(cnt), 0),
+    'total_users', COUNT(*)
+  )
+  FROM (
+    SELECT user_id, COUNT(*)::int AS cnt
+    FROM public.daily_reports
+    WHERE date >= CURRENT_DATE - 6
+      AND user_id IN (SELECT id FROM public.profiles WHERE role = 'cursant')
+    GROUP BY user_id
+  ) sub
+$$;
+
+-- ============================================================
 -- SEED: setează admin-ul implicit
 -- Rulează după ce userul s-a autentificat prima dată
 -- ============================================================

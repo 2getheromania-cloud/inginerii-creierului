@@ -3,9 +3,11 @@ import { getOrCreateProfile } from '@/lib/supabase/profile'
 import { redirect } from 'next/navigation'
 import AppShell from '@/components/layout/AppShell'
 import DailyChecklistForm from '@/components/dashboard/DailyChecklistForm'
+import AdminMessageCard from '@/components/dashboard/AdminMessageCard'
+import MotivationalCard from '@/components/dashboard/MotivationalCard'
 import { todayISO } from '@/lib/utils'
 import { getPhaseFromWeek, PHASE_COLORS, PROTOCOL_LABELS, PROTOCOL_LINKS } from '@/lib/program'
-import type { DailyReport, ProtocolFlags } from '@/lib/types'
+import type { DailyReport, ProtocolFlags, AdminMessage } from '@/lib/types'
 
 export default async function DashboardPage() {
   const supabase = createClient()
@@ -22,22 +24,41 @@ export default async function DashboardPage() {
   }
 
   const today = todayISO()
-  const { data: todayReport } = await supabase
-    .from('daily_reports')
-    .select('*')
-    .eq('user_id', user.id)
-    .eq('date', today)
-    .single()
-
   const phase = getPhaseFromWeek(profile.week)
-  const phaseColor = PHASE_COLORS[phase]
-  const activeFlags = Object.entries(profile.flags as ProtocolFlags)
-    .filter(([, v]) => v)
-    .map(([k]) => k as keyof ProtocolFlags)
+  const flags = profile.flags as ProtocolFlags
+  const activeFlags = Object.entries(flags).filter(([, v]) => v).map(([k]) => k as keyof ProtocolFlags)
+
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6)
+  const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0]
+
+  const [
+    { data: todayReport },
+    { data: recentReports },
+    { data: messagesRaw },
+    { data: groupStatsRaw },
+  ] = await Promise.all([
+    supabase.from('daily_reports').select('*').eq('user_id', user.id).eq('date', today).single(),
+    supabase.from('daily_reports').select('date').eq('user_id', user.id).gte('date', sevenDaysAgoStr),
+    supabase.from('admin_messages').select('*').eq('is_active', true).lte('published_at', new Date().toISOString()).order('published_at', { ascending: false }),
+    supabase.rpc('get_group_stats_last7'),
+  ])
+
+  const userDaysCompleted = recentReports?.length ?? 0
+  const groupStats = groupStatsRaw as { avg_reports: number; max_reports: number; total_users: number } | null
+
+  // Filter messages to only those relevant to this cursant
+  const messages = ((messagesRaw ?? []) as AdminMessage[]).filter(m => {
+    if (m.target_type === 'all') return true
+    if (m.target_type === 'phase') return m.target_value === phase
+    if (m.target_type === 'protocol') return flags[m.target_value as keyof ProtocolFlags] === true
+    return false
+  })
 
   return (
     <AppShell profile={profile}>
       <div className="space-y-6">
+        {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
@@ -46,13 +67,25 @@ export default async function DashboardPage() {
             <p className="text-gray-500">Astăzi este o oportunitate nouă de a-ți transforma microbiomul.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <span className={`badge ${phaseColor} text-sm px-3 py-1`}>{phase}</span>
+            <span className={`badge ${PHASE_COLORS[phase]} text-sm px-3 py-1`}>{phase}</span>
             <span className="badge bg-gray-100 text-gray-700 text-sm px-3 py-1">
               Săptămâna {profile.week}/24
             </span>
           </div>
         </div>
 
+        {/* Admin messages (only relevant ones) */}
+        {messages.map(m => (
+          <AdminMessageCard key={m.id} message={m} />
+        ))}
+
+        {/* Motivational card */}
+        <MotivationalCard
+          daysCompleted={userDaysCompleted}
+          avgGroup={groupStats?.avg_reports ?? null}
+        />
+
+        {/* Active protocols */}
         {activeFlags.length > 0 && (
           <div className="card bg-amber-50 border-amber-100">
             <p className="text-sm font-semibold text-amber-800 mb-2">Protocoale personalizate active:</p>
