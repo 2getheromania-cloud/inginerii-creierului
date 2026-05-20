@@ -241,6 +241,59 @@ AS $$
 $$;
 
 -- ============================================================
+-- GROUP CHAT MESSAGES
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.group_chat_messages (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  sender_id       UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  body            TEXT,
+  image_url       TEXT,
+  image_path      TEXT,
+  message_type    TEXT NOT NULL DEFAULT 'message' CHECK (message_type IN ('message', 'announcement')),
+  is_pinned       BOOLEAN NOT NULL DEFAULT FALSE,
+  is_announcement BOOLEAN NOT NULL DEFAULT FALSE,
+  deleted_at      TIMESTAMPTZ,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT gcm_has_content CHECK (body IS NOT NULL OR image_url IS NOT NULL)
+);
+
+ALTER TABLE public.group_chat_messages ENABLE ROW LEVEL SECURITY;
+
+-- Any authenticated user can read non-deleted messages
+CREATE POLICY "gcm_read" ON public.group_chat_messages
+  FOR SELECT USING (auth.uid() IS NOT NULL AND deleted_at IS NULL);
+
+-- Users can only insert their own messages
+CREATE POLICY "gcm_insert" ON public.group_chat_messages
+  FOR INSERT WITH CHECK (auth.uid() = sender_id);
+
+-- Only admins can update (pin, announce, soft-delete)
+CREATE POLICY "gcm_admin_update" ON public.group_chat_messages
+  FOR UPDATE USING (public.is_admin());
+
+CREATE INDEX IF NOT EXISTS idx_gcm_created_at
+  ON public.group_chat_messages (created_at DESC) WHERE deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_gcm_pinned
+  ON public.group_chat_messages (is_pinned) WHERE is_pinned = TRUE AND deleted_at IS NULL;
+
+-- ============================================================
+-- STORAGE: chat-images bucket (create manually in Supabase Dashboard)
+-- Bucket settings: public=true, file size limit=5242880 (5MB)
+-- Allowed MIME: image/jpeg, image/png, image/webp
+-- Then run these storage policies:
+-- ============================================================
+-- CREATE POLICY "chat_images_public_select" ON storage.objects
+--   FOR SELECT USING (bucket_id = 'chat-images');
+-- CREATE POLICY "chat_images_auth_insert" ON storage.objects
+--   FOR INSERT WITH CHECK (
+--     bucket_id = 'chat-images' AND auth.uid() IS NOT NULL
+--     AND (storage.foldername(name))[1] = auth.uid()::text
+--   );
+-- CREATE POLICY "chat_images_admin_delete" ON storage.objects
+--   FOR DELETE USING (bucket_id = 'chat-images' AND public.is_admin());
+
+-- ============================================================
 -- SEED: setează admin-ul implicit
 -- Rulează după ce userul s-a autentificat prima dată
 -- ============================================================

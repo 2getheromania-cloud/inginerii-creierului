@@ -36,7 +36,7 @@ export async function middleware(request: NextRequest) {
     return res
   }
 
-  const protectedPaths = ['/dashboard', '/istoric', '/resurse', '/profil', '/admin']
+  const protectedPaths = ['/dashboard', '/istoric', '/resurse', '/profil', '/admin', '/chat']
   const isProtected = protectedPaths.some(p => pathname.startsWith(p))
 
   // Utilizator neautentificat încearcă să acceseze rută protejată

@@ -78,6 +78,27 @@ export interface Notification {
   sent_at: string
 }
 
+export interface ChatMessageSender {
+  id: string
+  name: string | null
+  email: string
+  role: 'cursant' | 'admin'
+}
+
+export interface ChatMessage {
+  id: string
+  sender_id: string
+  body: string | null
+  image_url: string | null
+  image_path: string | null
+  message_type: 'message' | 'announcement'
+  is_pinned: boolean
+  is_announcement: boolean
+  deleted_at: string | null
+  created_at: string
+  sender: ChatMessageSender
+}
+
 export interface AdminMessage {
   id: string
   title: string
