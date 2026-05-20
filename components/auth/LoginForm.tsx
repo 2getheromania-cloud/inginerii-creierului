@@ -4,10 +4,11 @@ import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 export default function LoginForm() {
-  const [email, setEmail]   = useState('')
-  const [loading, setLoading] = useState(false)
-  const [sent, setSent]     = useState(false)
-  const [error, setError]   = useState('')
+  const [email, setEmail]       = useState('')
+  const [loading, setLoading]   = useState(false)
+  const [sent, setSent]         = useState(false)
+  const [error, setError]       = useState('')
+  const [redirectTo, setRedirectTo] = useState('')
   const searchParams = useSearchParams()
   const supabase = createClient()
 
@@ -29,11 +30,16 @@ export default function LoginForm() {
     // cookies from the HTTP request rather than document.cookie.
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
     const confirmPath = isIOS ? '/auth/callback' : '/auth/confirm'
+    const redirectUrl = `${window.location.origin}${confirmPath}`
+
+    // Save for debug display — if the link lands on homepage instead of this
+    // URL, the Supabase Dashboard → Auth → URL Configuration allowlist is missing it.
+    setRedirectTo(redirectUrl)
 
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim().toLowerCase(),
       options: {
-        emailRedirectTo: `${window.location.origin}${confirmPath}`,
+        emailRedirectTo: redirectUrl,
       },
     })
     setLoading(false)
@@ -51,6 +57,17 @@ export default function LoginForm() {
           Click pe link pentru a intra în cont.
         </p>
         <p className="text-xs text-gray-400">Link-ul expiră în 1 oră.</p>
+
+        {/* DEBUG TEMPORAR — șterge după ce confirmi că redirect-ul funcționează */}
+        <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-3 text-left">
+          <p className="text-xs font-semibold text-gray-500 mb-1">Debug — redirect URL trimis:</p>
+          <p className="text-xs font-mono text-gray-700 break-all">{redirectTo}</p>
+          <p className="text-xs text-gray-400 mt-2">
+            Dacă linkul duce pe homepage, adaugă acest URL în<br />
+            Supabase Dashboard → Auth → URL Configuration → Redirect URLs
+          </p>
+        </div>
+
         <button
           onClick={() => { setSent(false); setEmail('') }}
           className="mt-4 text-brand-600 text-sm hover:underline"
