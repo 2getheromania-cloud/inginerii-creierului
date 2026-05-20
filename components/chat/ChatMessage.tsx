@@ -15,7 +15,7 @@ export default function ChatMessageBubble({ message, isOwn, isAdmin, onAdminActi
 
   if (is_announcement) {
     return (
-      <div className="w-full px-4 py-1">
+      <div className="w-full px-4 py-1 group">
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
           <p className="text-xs text-amber-600 font-semibold mb-1">📣 Anunț de la echipă</p>
           {body && <p className="text-sm text-gray-800 whitespace-pre-wrap">{body}</p>}
@@ -26,6 +26,17 @@ export default function ChatMessageBubble({ message, isOwn, isAdmin, onAdminActi
           )}
           <p className="text-xs text-gray-400 mt-1">{time} · {sender.name || sender.email}</p>
         </div>
+        {isAdmin && (
+          <div className="flex gap-1 justify-center mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={() => onAdminAction(message.id, 'delete')}
+              className="text-base hover:scale-110 transition-transform"
+              title="Șterge mesajul"
+            >
+              🗑️
+            </button>
+          </div>
+        )}
       </div>
     )
   }
