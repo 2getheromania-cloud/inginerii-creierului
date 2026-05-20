@@ -1,7 +1,36 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
+import { createClient as createVanillaClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
+
+// ── Non-PKCE client for iOS OTP ───────────────────────────────────────────
+// createBrowserClient (@supabase/ssr) hard-codes flowType:'pkce', which makes
+// signInWithOtp attach a code_challenge to the request. Supabase then binds
+// the OTP to that PKCE challenge. When verifyOtp runs, the SDK reads the
+// code_verifier from cookies — but iOS Safari sends 0 cookies (confirmed:
+// totalCount=0 in debug). Verification fails with "Token has expired or is invalid".
+//
+// Fix: use vanilla @supabase/supabase-js with flowType:'implicit'.
+// No code_challenge is sent → OTP is plain → verifyOtp needs no code_verifier.
+// After verification, we transfer the session to the SSR cookie client so the
+// Next.js middleware can read it on the next server request.
+let _otpClient: ReturnType<typeof createVanillaClient> | null = null
+function getOTPClient() {
+  if (_otpClient) return _otpClient
+  _otpClient = createVanillaClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      auth: {
+        flowType:       'implicit', // explicit non-PKCE — no code_challenge
+        persistSession: false,      // session lives only for this verification;
+                                    // we transfer it to the SSR cookie client
+      },
+    }
+  )
+  return _otpClient
+}
 
 export default function LoginForm() {
   const [email, setEmail]     = useState('')
@@ -10,12 +39,12 @@ export default function LoginForm() {
   const [error, setError]     = useState('')
   const [otpCode, setOtpCode] = useState('')
   const [isIOS, setIsIOS]     = useState(false)
-  // Temporary debug — shows exact redirectTo used; remove after confirming desktop flow
+  const [otpDebug, setOtpDebug] = useState<Record<string, unknown> | null>(null)
+  // Temporary — shows redirectTo so desktop redirect can be verified
   const [redirectTo, setRedirectTo] = useState('')
 
   const searchParams = useSearchParams()
-  const router       = useRouter()
-  const supabase     = createClient()
+  const supabase     = createClient() // SSR client (cookie-based, PKCE)
 
   useEffect(() => {
     const urlError = searchParams.get('error')
@@ -23,23 +52,25 @@ export default function LoginForm() {
     setIsIOS(/iPad|iPhone|iPod/.test(navigator.userAgent))
   }, [searchParams])
 
-  // ── Email submit: two distinct flows ─────────────────────────────────────
+  // ── Email submit ──────────────────────────────────────────────────────────
   async function handleEmailSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!email.trim()) return
     setLoading(true)
     setError('')
+    setOtpDebug(null)
 
     if (isIOS) {
-      // OTP flow — no emailRedirectTo → Supabase sends 6-digit code, no PKCE
-      const { error: err } = await supabase.auth.signInWithOtp({
+      // OTP flow: non-PKCE client, no emailRedirectTo
+      // → Supabase sends 6-digit code, OTP is NOT bound to a PKCE challenge
+      const { error: err } = await getOTPClient().auth.signInWithOtp({
         email: email.trim().toLowerCase(),
       })
       setLoading(false)
       if (err) { setError(err.message); return }
       setSent(true)
     } else {
-      // Desktop magic link with PKCE
+      // Desktop: magic link with PKCE via SSR client
       const url = `${window.location.origin}/auth/confirm`
       setRedirectTo(url)
       const { error: err } = await supabase.auth.signInWithOtp({
@@ -52,31 +83,57 @@ export default function LoginForm() {
     }
   }
 
-  // ── OTP verify (iOS only) ─────────────────────────────────────────────────
+  // ── OTP verify (iOS) ──────────────────────────────────────────────────────
   async function handleOtpVerify(e: React.FormEvent) {
     e.preventDefault()
-    if (otpCode.trim().length < 6) return
+    const token = otpCode.trim()
+    if (token.length < 6) return
     setLoading(true)
     setError('')
 
-    const { error: verifyErr } = await supabase.auth.verifyOtp({
+    const payload = {
       email: email.trim().toLowerCase(),
-      token: otpCode.trim(),
+      tokenLength: token.length,
+      token,        // visible in UI for cross-checking with what Supabase sent
+      type: 'email',
+    }
+    console.log('[OTP] verifyOtp payload:', payload)
+    setOtpDebug(payload)
+
+    const { data, error: verifyErr } = await getOTPClient().auth.verifyOtp({
+      email: payload.email,
+      token,
       type:  'email',
     })
 
+    const result = { ok: !verifyErr, error: verifyErr?.message ?? null, hasSession: !!data?.session }
+    console.log('[OTP] verifyOtp result:', result)
+    setOtpDebug(prev => ({ ...prev as object, result }))
+
     if (verifyErr) {
       setLoading(false)
-      setError(verifyErr.message)
+      setError(`verifyOtp: ${verifyErr.message}`)
       return
     }
 
-    // Session stored client-side — fetch role then do full reload so
-    // middleware picks up the new cookies on the next server request.
+    if (!data?.session) {
+      setLoading(false)
+      setError('verifyOtp a reușit dar sesiunea lipsește.')
+      return
+    }
+
+    // Transfer session from non-PKCE vanilla client → SSR cookie client.
+    // This writes the access+refresh tokens to document.cookie (maxAge 7 days)
+    // so the Next.js middleware can authenticate the next server request.
+    await supabase.auth.setSession({
+      access_token:  data.session.access_token,
+      refresh_token: data.session.refresh_token,
+    })
+
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       setLoading(false)
-      setError('Sesiune invalidă după verificare.')
+      setError('Sesiune invalidă după setSession.')
       return
     }
 
@@ -86,7 +143,7 @@ export default function LoginForm() {
       .eq('id', user.id)
       .single()
 
-    // Full reload ensures the session cookie reaches the server middleware
+    // Full page reload so middleware reads the freshly-written cookie
     window.location.href = profile?.role === 'admin' ? '/admin' : '/dashboard'
   }
 
@@ -98,8 +155,7 @@ export default function LoginForm() {
           <div className="text-4xl mb-3">📱</div>
           <h2 className="text-xl font-bold text-gray-900 mb-1">Introdu codul</h2>
           <p className="text-gray-500 text-sm">
-            Ți-am trimis un cod de autentificare la{' '}
-            <strong>{email}</strong>.
+            Ți-am trimis un cod de autentificare la <strong>{email}</strong>.
           </p>
         </div>
 
@@ -122,21 +178,35 @@ export default function LoginForm() {
           </div>
 
           {error && (
-            <div className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">
+            <div className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 break-words">
               {error}
             </div>
           )}
 
-          <button type="submit" className="btn-primary w-full" disabled={loading || otpCode.length < 6}>
+          <button
+            type="submit"
+            className="btn-primary w-full"
+            disabled={loading || otpCode.length < 6}
+          >
             {loading ? 'Se verifică...' : 'Autentifică-mă'}
           </button>
         </form>
+
+        {/* Debug panel — visible on iPhone without DevTools */}
+        {otpDebug && (
+          <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-3">
+            <p className="text-xs font-semibold text-gray-500 mb-1">Debug OTP:</p>
+            <pre className="text-xs font-mono text-gray-700 whitespace-pre-wrap break-all">
+              {JSON.stringify(otpDebug, null, 2)}
+            </pre>
+          </div>
+        )}
 
         <p className="text-xs text-gray-400 text-center mt-4">
           Codul expiră în 1 oră.{' '}
           <button
             type="button"
-            onClick={() => { setSent(false); setOtpCode(''); setError('') }}
+            onClick={() => { setSent(false); setOtpCode(''); setError(''); setOtpDebug(null) }}
             className="text-brand-600 underline"
           >
             Retrimite codul
@@ -158,7 +228,7 @@ export default function LoginForm() {
         </p>
         <p className="text-xs text-gray-400">Link-ul expiră în 1 oră.</p>
 
-        {/* DEBUG TEMPORAR — șterge după ce confirmi că redirect-ul funcționează */}
+        {/* DEBUG TEMPORAR */}
         {redirectTo && (
           <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-3 text-left">
             <p className="text-xs font-semibold text-gray-500 mb-1">Debug — redirect URL:</p>
@@ -176,7 +246,7 @@ export default function LoginForm() {
     )
   }
 
-  // ── Email input form (both platforms) ────────────────────────────────────
+  // ── Email input form ──────────────────────────────────────────────────────
   return (
     <div className="card max-w-sm w-full">
       <div className="text-center mb-6">
