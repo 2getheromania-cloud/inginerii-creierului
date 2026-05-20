@@ -8,10 +8,18 @@ export default function DeleteUserButton({ userId, userName }: { userId: string;
   const router = useRouter()
 
   async function handleDelete() {
-    const confirmed = window.confirm(
-      `Ești sigur că vrei să ștergi cursantul "${userName}"?\n\nAceastă acțiune este ireversibilă și va șterge toate rapoartele și datele asociate.`
+    const step1 = window.confirm(
+      `Ești sigur că vrei să ștergi cursantul "${userName}"?\n\nAceastă acțiune este IREVERSIBILĂ și va șterge permanent:\n• toate rapoartele zilnice\n• profilul cursantului\n• contul de autentificare`
     )
-    if (!confirmed) return
+    if (!step1) return
+
+    const step2 = window.prompt(
+      `Introdu "STERGE" (cu majuscule) pentru a confirma ștergerea permanentă a lui ${userName}:`
+    )
+    if (step2 !== 'STERGE') {
+      if (step2 !== null) alert('Textul introdus nu este corect. Ștergerea a fost anulată.')
+      return
+    }
 
     setLoading(true)
     setError('')

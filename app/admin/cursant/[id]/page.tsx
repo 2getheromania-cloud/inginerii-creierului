@@ -4,6 +4,7 @@ import { redirect, notFound } from 'next/navigation'
 import AppShell from '@/components/layout/AppShell'
 import ProgressChart from '@/components/charts/ProgressChart'
 import AdminCursantClient from '@/components/admin/AdminCursantClient'
+import DeleteUserButton from '@/components/admin/DeleteUserButton'
 import { formatDate } from '@/lib/utils'
 import {
   getPhaseFromWeek,
@@ -14,9 +15,15 @@ import {
   GENERAL_MATERIALS,
 } from '@/lib/program'
 import type { Profile, DailyReport, ProtocolFlags } from '@/lib/types'
-import DeleteUserButton from '@/components/admin/DeleteUserButton'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
+
+const GENERAL_KEYS = [
+  'Suplimente Microbiom',
+  'Materiale suport curs',
+  'Somn & recuperare',
+  'Gestionarea stresului',
+] as const
 
 export default async function AdminCursantPage({ params }: { params: { id: string } }) {
   const supabase = createClient()
@@ -34,26 +41,29 @@ export default async function AdminCursantPage({ params }: { params: { id: strin
     supabase.from('daily_reports').select('*').eq('user_id', params.id).order('date', { ascending: false }).limit(7),
   ])
 
-  const phase       = getPhaseFromWeek(cursantProfile.week)
-  const flags       = cursantProfile.flags as ProtocolFlags
-  const activeFlags = Object.entries(flags).filter(([, v]) => v).map(([k]) => k as keyof ProtocolFlags)
+  const phase        = getPhaseFromWeek(cursantProfile.week)
+  const flags        = cursantProfile.flags as ProtocolFlags
+  const activeFlags  = Object.entries(flags).filter(([, v]) => v).map(([k]) => k as keyof ProtocolFlags)
   const recipeConfig = PHASE_RECIPE_CONFIGS[phase]
 
-  const GENERAL_KEYS = ['Suplimente Microbiom', 'Materiale suport curs', 'Somn & recuperare', 'Gestionarea stresului'] as const
   const generalLinks = GENERAL_MATERIALS.filter(m =>
     (GENERAL_KEYS as readonly string[]).includes(m.title) ||
     (flags.tiroida && m.title === 'Suplimente Tiroidă')
   )
 
+  const userName = cursantProfile.name ?? cursantProfile.email
+
   return (
     <AppShell profile={myProfile}>
       <div className="space-y-8">
+
+        {/* ── Header ── */}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <Link href="/admin" className="text-sm text-gray-400 hover:text-gray-600 mb-2 inline-block">
               ← Înapoi la admin
             </Link>
-            <h1 className="text-2xl font-bold text-gray-900">{cursantProfile.name || cursantProfile.email}</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{userName}</h1>
             <p className="text-gray-500">{cursantProfile.email}</p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -62,8 +72,10 @@ export default async function AdminCursantPage({ params }: { params: { id: strin
           </div>
         </div>
 
+        {/* ── Edit profile ── */}
         <AdminCursantClient profile={cursantProfile as Profile} />
 
+        {/* ── Protocoale active ── */}
         {activeFlags.length > 0 && (
           <div className="card">
             <h3 className="font-semibold mb-3">Protocoale active</h3>
@@ -75,6 +87,7 @@ export default async function AdminCursantPage({ params }: { params: { id: strin
           </div>
         )}
 
+        {/* ── Charts ── */}
         <div className="card">
           <h3 className="font-semibold mb-4">Ultimele 7 zile — indicatori</h3>
           {(reports7?.length ?? 0) > 0
@@ -91,6 +104,7 @@ export default async function AdminCursantPage({ params }: { params: { id: strin
           }
         </div>
 
+        {/* ── Reports table ── */}
         <div className="card">
           <h3 className="font-semibold mb-4">Rapoarte recente (30 zile)</h3>
           {(reports30?.length ?? 0) === 0 ? (
@@ -113,72 +127,106 @@ export default async function AdminCursantPage({ params }: { params: { id: strin
 
         {/* ── Resurse curente ── */}
         <div className="card">
-          <h3 className="font-semibold mb-4">Resurse curente</h3>
-          <div className="space-y-4">
+          <h3 className="font-semibold text-gray-800 mb-5">Resurse curente</h3>
 
-            {/* Rețete fază */}
-            <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Rețete &amp; materiale fază</p>
-              <div className="flex flex-wrap gap-2">
-                {recipeConfig.kind === 'single' ? (
-                  <a href={recipeConfig.url} target="_blank" rel="noopener noreferrer"
-                    className="btn-primary text-sm">
-                    {recipeConfig.label ?? 'Rețete curente'} →
+          {/* Rețete fază */}
+          <div className="mb-5">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+              Rețete &amp; materiale fază — {phase}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {recipeConfig.kind === 'dual' ? (
+                <>
+                  <a
+                    href={recipeConfig.vegetarian}
+                    target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-green-50 border border-green-200 text-green-700 hover:bg-green-100 hover:border-green-300 transition-colors text-sm font-medium"
+                  >
+                    🥦 Rețete Vegetarian →
                   </a>
-                ) : (
-                  <>
-                    <a href={recipeConfig.vegetarian} target="_blank" rel="noopener noreferrer"
-                      className="btn-primary text-sm">
-                      Vegetarian →
-                    </a>
-                    <a href={recipeConfig.omnivor} target="_blank" rel="noopener noreferrer"
-                      className="btn-secondary text-sm">
-                      Omnivor →
-                    </a>
-                  </>
-                )}
-              </div>
+                  <a
+                    href={recipeConfig.omnivor}
+                    target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-50 border border-orange-200 text-orange-700 hover:bg-orange-100 hover:border-orange-300 transition-colors text-sm font-medium"
+                  >
+                    🥩 Rețete Omnivor →
+                  </a>
+                </>
+              ) : (
+                <a
+                  href={recipeConfig.url}
+                  target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-50 border border-brand-200 text-brand-700 hover:bg-brand-100 hover:border-brand-300 transition-colors text-sm font-medium"
+                >
+                  📄 {recipeConfig.label ?? 'Materiale fază'} →
+                </a>
+              )}
             </div>
+          </div>
 
-            {/* Protocoale active */}
-            {activeFlags.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Protocoale active</p>
-                <div className="flex flex-wrap gap-2">
-                  {activeFlags.map(f => (
-                    <a key={f} href={PROTOCOL_LINKS[f]} target="_blank" rel="noopener noreferrer"
-                      className="badge bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors cursor-pointer">
-                      {PROTOCOL_LABELS[f]} →
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Materiale generale */}
-            <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Materiale generale</p>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {generalLinks.map(m => (
-                  <a key={m.title} href={m.url} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 p-2 rounded-lg border border-gray-200 hover:border-brand-300 hover:bg-brand-50 transition-colors text-sm text-gray-700 hover:text-brand-700">
-                    <span>{m.icon}</span>
-                    <span className="font-medium leading-tight">{m.title}</span>
+          {/* Protocoale active cu linkuri */}
+          {activeFlags.length > 0 && (
+            <div className="mb-5">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Protocoale active</p>
+              <div className="flex flex-wrap gap-2">
+                {activeFlags.map(f => (
+                  <a
+                    key={f}
+                    href={PROTOCOL_LINKS[f]}
+                    target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 hover:border-amber-300 transition-colors text-sm font-medium"
+                  >
+                    ⚡ {PROTOCOL_LABELS[f]} →
                   </a>
                 ))}
               </div>
             </div>
+          )}
+
+          {/* Materiale generale */}
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Materiale generale</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {generalLinks.map(m => (
+                <a
+                  key={m.title}
+                  href={m.url}
+                  target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 hover:border-brand-300 hover:bg-brand-50 transition-colors group"
+                >
+                  <span className="text-xl flex-shrink-0">{m.icon}</span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-800 group-hover:text-brand-700 transition-colors">
+                      {m.title}
+                    </p>
+                    <p className="text-xs text-gray-400 truncate">{m.desc}</p>
+                  </div>
+                  <span className="ml-auto text-gray-300 group-hover:text-brand-500 transition-colors flex-shrink-0">→</span>
+                </a>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* ── Acțiuni administrative ── */}
-        <div className="card border border-red-100">
-          <h3 className="font-semibold text-gray-800 mb-1">Acțiuni administrative</h3>
-          <p className="text-sm text-gray-500 mb-4">Acțiunile de mai jos sunt ireversibile.</p>
-          <DeleteUserButton
-            userId={cursantProfile.id}
-            userName={cursantProfile.name ?? cursantProfile.email}
-          />
+        {/* ── Separator ── */}
+        <div className="border-t border-red-100 pt-4">
+          <p className="text-xs font-semibold text-red-400 uppercase tracking-wide mb-4">
+            Zonă periculoasă
+          </p>
+
+          {/* ── Acțiuni administrative ── */}
+          <div className="card border border-red-200 bg-red-50/30">
+            <h3 className="font-semibold text-gray-800 mb-1">Acțiuni administrative</h3>
+            <p className="text-sm text-gray-500 mb-1">
+              Ștergerea unui cursant este <strong>ireversibilă</strong>. Vor fi șterse:
+            </p>
+            <ul className="text-sm text-gray-500 list-disc list-inside mb-4 space-y-0.5">
+              <li>Toate rapoartele zilnice</li>
+              <li>Profilul cursantului</li>
+              <li>Contul de autentificare</li>
+            </ul>
+            <DeleteUserButton userId={cursantProfile.id} userName={userName} />
+          </div>
         </div>
 
       </div>
