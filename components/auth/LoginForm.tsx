@@ -1,50 +1,83 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { createClient as createVanillaClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 
-// ── Non-PKCE client for iOS OTP ───────────────────────────────────────────
-// createBrowserClient (@supabase/ssr) hard-codes flowType:'pkce', which makes
-// signInWithOtp attach a code_challenge to the request. Supabase then binds
-// the OTP to that PKCE challenge. When verifyOtp runs, the SDK reads the
-// code_verifier from cookies — but iOS Safari sends 0 cookies (confirmed:
-// totalCount=0 in debug). Verification fails with "Token has expired or is invalid".
-//
-// Fix: use vanilla @supabase/supabase-js with flowType:'implicit'.
-// No code_challenge is sent → OTP is plain → verifyOtp needs no code_verifier.
-// After verification, we transfer the session to the SSR cookie client so the
-// Next.js middleware can read it on the next server request.
-let _otpClient: ReturnType<typeof createVanillaClient> | null = null
-function getOTPClient() {
-  if (_otpClient) return _otpClient
-  _otpClient = createVanillaClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+// ── iOS OTP helpers using direct REST (zero SDK, zero PKCE) ──────────────
+// The Supabase JS SDK (@supabase/ssr) hard-codes flowType:'pkce'.
+// Even @supabase/supabase-js v2 defaults to 'pkce' now.
+// Any SDK call to signInWithOtp sends code_challenge to GoTrue, which binds
+// the OTP to that PKCE verifier.  verifyOtp then must supply code_verifier —
+// but iOS sends 0 cookies, so it fails with "Token has expired or is invalid".
+// Direct REST bypasses all SDK flow-type logic entirely.
+
+async function restSignInOTP(email: string): Promise<{
+  ok: boolean
+  status: number
+  body: Record<string, unknown>
+}> {
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/otp`,
     {
-      auth: {
-        flowType:       'implicit', // explicit non-PKCE — no code_challenge
-        persistSession: false,      // session lives only for this verification;
-                                    // we transfer it to the SSR cookie client
+      method:  'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       },
+      body: JSON.stringify({
+        email,
+        create_user: true,
+        // Intentionally NO code_challenge and NO redirect_to
+      }),
     }
   )
-  return _otpClient
+  const body = await res.json().catch(() => ({})) as Record<string, unknown>
+  return { ok: res.ok, status: res.status, body }
 }
 
+async function restVerifyOTP(
+  email: string,
+  token: string,
+  type: string,
+): Promise<{
+  ok: boolean
+  status: number
+  body: Record<string, unknown>
+  session: { access_token: string; refresh_token: string } | null
+}> {
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/verify`,
+    {
+      method:  'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      },
+      body: JSON.stringify({ email, token, type }),
+    }
+  )
+  const body = await res.json().catch(() => ({})) as Record<string, unknown>
+  const session =
+    typeof body.access_token === 'string' && typeof body.refresh_token === 'string'
+      ? { access_token: body.access_token, refresh_token: body.refresh_token }
+      : null
+  return { ok: res.ok, status: res.status, body, session }
+}
+
+// ── Component ─────────────────────────────────────────────────────────────
 export default function LoginForm() {
-  const [email, setEmail]     = useState('')
-  const [loading, setLoading] = useState(false)
-  const [sent, setSent]       = useState(false)
-  const [error, setError]     = useState('')
-  const [otpCode, setOtpCode] = useState('')
-  const [isIOS, setIsIOS]     = useState(false)
-  const [otpDebug, setOtpDebug] = useState<Record<string, unknown> | null>(null)
-  // Temporary — shows redirectTo so desktop redirect can be verified
-  const [redirectTo, setRedirectTo] = useState('')
+  const [email, setEmail]         = useState('')
+  const [loading, setLoading]     = useState(false)
+  const [sent, setSent]           = useState(false)
+  const [error, setError]         = useState('')
+  const [otpCode, setOtpCode]     = useState('')
+  const [isIOS, setIsIOS]         = useState(false)
+  const [signInDbg, setSignInDbg] = useState<Record<string, unknown> | null>(null)
+  const [verifyDbg, setVerifyDbg] = useState<Record<string, unknown> | null>(null)
+  const [redirectTo, setRedirectTo] = useState('') // desktop debug
 
   const searchParams = useSearchParams()
-  const supabase     = createClient() // SSR client (cookie-based, PKCE)
+  const supabase     = createClient() // SSR cookie client (PKCE) — used only for desktop & post-auth
 
   useEffect(() => {
     const urlError = searchParams.get('error')
@@ -58,23 +91,38 @@ export default function LoginForm() {
     if (!email.trim()) return
     setLoading(true)
     setError('')
-    setOtpDebug(null)
+    setSignInDbg(null)
+    setVerifyDbg(null)
+
+    const emailClean = email.trim().toLowerCase()
 
     if (isIOS) {
-      // OTP flow: non-PKCE client, no emailRedirectTo
-      // → Supabase sends 6-digit code, OTP is NOT bound to a PKCE challenge
-      const { error: err } = await getOTPClient().auth.signInWithOtp({
-        email: email.trim().toLowerCase(),
-      })
+      const callInfo = {
+        method:  'POST',
+        url:     `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/otp`,
+        body:    { email: emailClean, create_user: true },
+        note:    'REST — no SDK, no code_challenge, no redirect_to',
+        ts:      new Date().toISOString(),
+      }
+      console.log('[OTP] signIn call', callInfo)
+
+      const { ok, status, body } = await restSignInOTP(emailClean)
+      const dbg = { ...callInfo, response: { ok, status, body } }
+      setSignInDbg(dbg)
+      console.log('[OTP] signIn response', dbg.response)
+
       setLoading(false)
-      if (err) { setError(err.message); return }
+      if (!ok) {
+        const msg = (body.message ?? body.error_description ?? body.error ?? 'Eroare la trimitere') as string
+        setError(String(msg))
+        return
+      }
       setSent(true)
     } else {
-      // Desktop: magic link with PKCE via SSR client
       const url = `${window.location.origin}/auth/confirm`
       setRedirectTo(url)
       const { error: err } = await supabase.auth.signInWithOtp({
-        email: email.trim().toLowerCase(),
+        email: emailClean,
         options: { emailRedirectTo: url },
       })
       setLoading(false)
@@ -83,58 +131,60 @@ export default function LoginForm() {
     }
   }
 
-  // ── OTP verify (iOS) — tries multiple token types until one succeeds ────────
+  // ── OTP verify (iOS) ──────────────────────────────────────────────────────
   async function handleOtpVerify(e: React.FormEvent) {
     e.preventDefault()
-    // Strip any non-digit characters defensively
     const token = otpCode.replace(/\D/g, '').trim()
     if (token.length < 6) return
     setLoading(true)
     setError('')
+    setVerifyDbg(null)
 
     const emailClean = email.trim().toLowerCase()
-    const otp = getOTPClient()
-
-    // Supabase may issue the token under different types depending on whether
-    // the user already exists ('magiclink') or is signing up ('signup').
-    // Try all three and use the first that succeeds.
     const types = ['email', 'magiclink', 'signup'] as const
-    type OtpType = typeof types[number]
 
-    type Attempt = { type: OtpType; ok: boolean; error: string | null; hasSession: boolean }
-    const attempts: Attempt[] = []
+    const attempts: Array<{
+      type: string
+      ok: boolean
+      status: number
+      error: string | null
+      hasSession: boolean
+      rawBody: Record<string, unknown>
+    }> = []
+
     let successTokens: { access_token: string; refresh_token: string } | null = null
 
     for (const type of types) {
-      const { data, error: err } = await otp.auth.verifyOtp({ email: emailClean, token, type })
-      const attempt: Attempt = {
+      const { ok, status, body, session } = await restVerifyOTP(emailClean, token, type)
+      const attempt = {
         type,
-        ok:         !err && !!data?.session,
-        error:      err?.message ?? null,
-        hasSession: !!data?.session,
+        ok:         ok && !!session,
+        status,
+        error:      ok && session ? null : String(body.message ?? body.error_description ?? body.error ?? '—'),
+        hasSession: !!session,
+        rawBody:    body,
       }
       attempts.push(attempt)
-      console.log('[OTP] attempt', attempt)
+      console.log('[OTP] verify attempt', attempt)
 
-      if (!err && data?.session) {
-        successTokens = {
-          access_token:  data.session.access_token,
-          refresh_token: data.session.refresh_token,
-        }
+      if (session) {
+        successTokens = session
         break
       }
     }
 
-    setOtpDebug({ email: emailClean, token, tokenLength: token.length, attempts })
+    const dbg = { email: emailClean, token, tokenLength: token.length, attempts }
+    setVerifyDbg(dbg)
+    console.log('[OTP] verify summary', dbg)
 
     if (!successTokens) {
       setLoading(false)
       const lastErr = attempts[attempts.length - 1]?.error ?? 'Eroare necunoscută'
-      setError(`Cod invalid sau expirat. (${lastErr})`)
+      setError(`Toate tipurile au eșuat. Ultimul: ${lastErr}`)
       return
     }
 
-    // Transfer session to SSR cookie client so middleware can auth next request
+    // Transfer session to SSR cookie client so Next.js middleware can auth next request
     await supabase.auth.setSession(successTokens)
 
     const { data: { user } } = await supabase.auth.getUser()
@@ -198,21 +248,31 @@ export default function LoginForm() {
           </button>
         </form>
 
-        {/* Debug panel — visible on iPhone without DevTools */}
-        {otpDebug && (
-          <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-3">
-            <p className="text-xs font-semibold text-gray-500 mb-1">Debug OTP:</p>
-            <pre className="text-xs font-mono text-gray-700 whitespace-pre-wrap break-all">
-              {JSON.stringify(otpDebug, null, 2)}
-            </pre>
-          </div>
-        )}
+        {/* Debug panel — always visible, no DevTools needed on iPhone */}
+        <div className="mt-4 space-y-2">
+          {signInDbg && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs font-semibold text-blue-600 mb-1">signIn REST:</p>
+              <pre className="text-xs font-mono text-blue-800 whitespace-pre-wrap break-all">
+                {JSON.stringify(signInDbg, null, 2)}
+              </pre>
+            </div>
+          )}
+          {verifyDbg && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+              <p className="text-xs font-semibold text-gray-600 mb-1">verify REST:</p>
+              <pre className="text-xs font-mono text-gray-800 whitespace-pre-wrap break-all">
+                {JSON.stringify(verifyDbg, null, 2)}
+              </pre>
+            </div>
+          )}
+        </div>
 
         <p className="text-xs text-gray-400 text-center mt-4">
           Codul expiră în 1 oră.{' '}
           <button
             type="button"
-            onClick={() => { setSent(false); setOtpCode(''); setError(''); setOtpDebug(null) }}
+            onClick={() => { setSent(false); setOtpCode(''); setError(''); setSignInDbg(null); setVerifyDbg(null) }}
             className="text-brand-600 underline"
           >
             Retrimite codul
@@ -233,15 +293,12 @@ export default function LoginForm() {
           Click pe link pentru a intra în cont.
         </p>
         <p className="text-xs text-gray-400">Link-ul expiră în 1 oră.</p>
-
-        {/* DEBUG TEMPORAR */}
         {redirectTo && (
           <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-3 text-left">
             <p className="text-xs font-semibold text-gray-500 mb-1">Debug — redirect URL:</p>
             <p className="text-xs font-mono text-gray-700 break-all">{redirectTo}</p>
           </div>
         )}
-
         <button
           onClick={() => { setSent(false); setEmail('') }}
           className="mt-4 text-brand-600 text-sm hover:underline"
