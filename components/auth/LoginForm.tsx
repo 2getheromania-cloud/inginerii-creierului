@@ -83,52 +83,59 @@ export default function LoginForm() {
     }
   }
 
-  // ── OTP verify (iOS) ──────────────────────────────────────────────────────
+  // ── OTP verify (iOS) — tries multiple token types until one succeeds ────────
   async function handleOtpVerify(e: React.FormEvent) {
     e.preventDefault()
-    const token = otpCode.trim()
+    // Strip any non-digit characters defensively
+    const token = otpCode.replace(/\D/g, '').trim()
     if (token.length < 6) return
     setLoading(true)
     setError('')
 
-    const payload = {
-      email: email.trim().toLowerCase(),
-      tokenLength: token.length,
-      token,        // visible in UI for cross-checking with what Supabase sent
-      type: 'email',
+    const emailClean = email.trim().toLowerCase()
+    const otp = getOTPClient()
+
+    // Supabase may issue the token under different types depending on whether
+    // the user already exists ('magiclink') or is signing up ('signup').
+    // Try all three and use the first that succeeds.
+    const types = ['email', 'magiclink', 'signup'] as const
+    type OtpType = typeof types[number]
+
+    type Attempt = { type: OtpType; ok: boolean; error: string | null; hasSession: boolean }
+    const attempts: Attempt[] = []
+    let successTokens: { access_token: string; refresh_token: string } | null = null
+
+    for (const type of types) {
+      const { data, error: err } = await otp.auth.verifyOtp({ email: emailClean, token, type })
+      const attempt: Attempt = {
+        type,
+        ok:         !err && !!data?.session,
+        error:      err?.message ?? null,
+        hasSession: !!data?.session,
+      }
+      attempts.push(attempt)
+      console.log('[OTP] attempt', attempt)
+
+      if (!err && data?.session) {
+        successTokens = {
+          access_token:  data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        }
+        break
+      }
     }
-    console.log('[OTP] verifyOtp payload:', payload)
-    setOtpDebug(payload)
 
-    const { data, error: verifyErr } = await getOTPClient().auth.verifyOtp({
-      email: payload.email,
-      token,
-      type:  'email',
-    })
+    setOtpDebug({ email: emailClean, token, tokenLength: token.length, attempts })
 
-    const result = { ok: !verifyErr, error: verifyErr?.message ?? null, hasSession: !!data?.session }
-    console.log('[OTP] verifyOtp result:', result)
-    setOtpDebug(prev => ({ ...prev as object, result }))
-
-    if (verifyErr) {
+    if (!successTokens) {
       setLoading(false)
-      setError(`verifyOtp: ${verifyErr.message}`)
+      const lastErr = attempts[attempts.length - 1]?.error ?? 'Eroare necunoscută'
+      setError(`Cod invalid sau expirat. (${lastErr})`)
       return
     }
 
-    if (!data?.session) {
-      setLoading(false)
-      setError('verifyOtp a reușit dar sesiunea lipsește.')
-      return
-    }
-
-    // Transfer session from non-PKCE vanilla client → SSR cookie client.
-    // This writes the access+refresh tokens to document.cookie (maxAge 7 days)
-    // so the Next.js middleware can authenticate the next server request.
-    await supabase.auth.setSession({
-      access_token:  data.session.access_token,
-      refresh_token: data.session.refresh_token,
-    })
+    // Transfer session to SSR cookie client so middleware can auth next request
+    await supabase.auth.setSession(successTokens)
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
@@ -143,7 +150,6 @@ export default function LoginForm() {
       .eq('id', user.id)
       .single()
 
-    // Full page reload so middleware reads the freshly-written cookie
     window.location.href = profile?.role === 'admin' ? '/admin' : '/dashboard'
   }
 
