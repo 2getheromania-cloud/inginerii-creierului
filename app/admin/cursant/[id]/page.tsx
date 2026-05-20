@@ -5,8 +5,16 @@ import AppShell from '@/components/layout/AppShell'
 import ProgressChart from '@/components/charts/ProgressChart'
 import AdminCursantClient from '@/components/admin/AdminCursantClient'
 import { formatDate } from '@/lib/utils'
-import { getPhaseFromWeek, PHASE_COLORS, PROTOCOL_LABELS } from '@/lib/program'
+import {
+  getPhaseFromWeek,
+  PHASE_COLORS,
+  PROTOCOL_LABELS,
+  PROTOCOL_LINKS,
+  PHASE_RECIPE_CONFIGS,
+  GENERAL_MATERIALS,
+} from '@/lib/program'
 import type { Profile, DailyReport, ProtocolFlags } from '@/lib/types'
+import DeleteUserButton from '@/components/admin/DeleteUserButton'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 
@@ -26,9 +34,16 @@ export default async function AdminCursantPage({ params }: { params: { id: strin
     supabase.from('daily_reports').select('*').eq('user_id', params.id).order('date', { ascending: false }).limit(7),
   ])
 
-  const phase = getPhaseFromWeek(cursantProfile.week)
-  const activeFlags = Object.entries(cursantProfile.flags as ProtocolFlags)
-    .filter(([, v]) => v).map(([k]) => k as keyof ProtocolFlags)
+  const phase       = getPhaseFromWeek(cursantProfile.week)
+  const flags       = cursantProfile.flags as ProtocolFlags
+  const activeFlags = Object.entries(flags).filter(([, v]) => v).map(([k]) => k as keyof ProtocolFlags)
+  const recipeConfig = PHASE_RECIPE_CONFIGS[phase]
+
+  const GENERAL_KEYS = ['Suplimente Microbiom', 'Materiale suport curs', 'Somn & recuperare', 'Gestionarea stresului'] as const
+  const generalLinks = GENERAL_MATERIALS.filter(m =>
+    (GENERAL_KEYS as readonly string[]).includes(m.title) ||
+    (flags.tiroida && m.title === 'Suplimente Tiroidă')
+  )
 
   return (
     <AppShell profile={myProfile}>
@@ -95,6 +110,77 @@ export default async function AdminCursantPage({ params }: { params: { id: strin
             </div>
           )}
         </div>
+
+        {/* ── Resurse curente ── */}
+        <div className="card">
+          <h3 className="font-semibold mb-4">Resurse curente</h3>
+          <div className="space-y-4">
+
+            {/* Rețete fază */}
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Rețete &amp; materiale fază</p>
+              <div className="flex flex-wrap gap-2">
+                {recipeConfig.kind === 'single' ? (
+                  <a href={recipeConfig.url} target="_blank" rel="noopener noreferrer"
+                    className="btn-primary text-sm">
+                    {recipeConfig.label ?? 'Rețete curente'} →
+                  </a>
+                ) : (
+                  <>
+                    <a href={recipeConfig.vegetarian} target="_blank" rel="noopener noreferrer"
+                      className="btn-primary text-sm">
+                      Vegetarian →
+                    </a>
+                    <a href={recipeConfig.omnivor} target="_blank" rel="noopener noreferrer"
+                      className="btn-secondary text-sm">
+                      Omnivor →
+                    </a>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Protocoale active */}
+            {activeFlags.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Protocoale active</p>
+                <div className="flex flex-wrap gap-2">
+                  {activeFlags.map(f => (
+                    <a key={f} href={PROTOCOL_LINKS[f]} target="_blank" rel="noopener noreferrer"
+                      className="badge bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors cursor-pointer">
+                      {PROTOCOL_LABELS[f]} →
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Materiale generale */}
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Materiale generale</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {generalLinks.map(m => (
+                  <a key={m.title} href={m.url} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 p-2 rounded-lg border border-gray-200 hover:border-brand-300 hover:bg-brand-50 transition-colors text-sm text-gray-700 hover:text-brand-700">
+                    <span>{m.icon}</span>
+                    <span className="font-medium leading-tight">{m.title}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Acțiuni administrative ── */}
+        <div className="card border border-red-100">
+          <h3 className="font-semibold text-gray-800 mb-1">Acțiuni administrative</h3>
+          <p className="text-sm text-gray-500 mb-4">Acțiunile de mai jos sunt ireversibile.</p>
+          <DeleteUserButton
+            userId={cursantProfile.id}
+            userName={cursantProfile.name ?? cursantProfile.email}
+          />
+        </div>
+
       </div>
     </AppShell>
   )
