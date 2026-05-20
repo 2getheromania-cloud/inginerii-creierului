@@ -36,14 +36,22 @@ CREATE POLICY "profiles_select_own" ON public.profiles
 CREATE POLICY "profiles_update_own" ON public.profiles
   FOR UPDATE USING (auth.uid() = id);
 
+-- Helper: verifică dacă utilizatorul curent este admin fără să treacă prin RLS
+-- SECURITY DEFINER = rulează ca owner (postgres), ocolind RLS → evită recursivitatea
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role = 'admin'
+  );
+$$;
+
 -- Admin poate vedea toate profilurile
 CREATE POLICY "profiles_admin_all" ON public.profiles
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles p
-      WHERE p.id = auth.uid() AND p.role = 'admin'
-    )
-  );
+  FOR ALL USING (public.is_admin());
 
 -- Trigger: auto-creare profil la înregistrare
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -88,12 +96,7 @@ CREATE POLICY "daily_reports_own" ON public.daily_reports
   FOR ALL USING (auth.uid() = user_id);
 
 CREATE POLICY "daily_reports_admin" ON public.daily_reports
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles p
-      WHERE p.id = auth.uid() AND p.role = 'admin'
-    )
-  );
+  FOR ALL USING (public.is_admin());
 
 -- ============================================================
 -- NOTIFICATIONS
@@ -113,12 +116,7 @@ CREATE POLICY "notifications_own" ON public.notifications
   FOR SELECT USING (auth.uid() = user_id);
 
 CREATE POLICY "notifications_admin" ON public.notifications
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles p
-      WHERE p.id = auth.uid() AND p.role = 'admin'
-    )
-  );
+  FOR ALL USING (public.is_admin());
 
 -- ============================================================
 -- SCHEDULED NOTIFICATIONS (pentru trimitere programată)
@@ -137,12 +135,7 @@ CREATE TABLE IF NOT EXISTS public.scheduled_notifications (
 ALTER TABLE public.scheduled_notifications ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "scheduled_notifications_admin" ON public.scheduled_notifications
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles p
-      WHERE p.id = auth.uid() AND p.role = 'admin'
-    )
-  );
+  FOR ALL USING (public.is_admin());
 
 -- ============================================================
 -- HELPER VIEWS
