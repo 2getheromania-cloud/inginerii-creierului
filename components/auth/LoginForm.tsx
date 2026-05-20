@@ -22,10 +22,18 @@ export default function LoginForm() {
     if (!email.trim()) return
     setLoading(true)
     setError('')
+
+    // iOS Safari kills session cookies when the tab is suspended; the PKCE
+    // code_verifier stored client-side may be gone by the time the user taps
+    // the link in Mail.app. Route iOS to the server-side callback which reads
+    // cookies from the HTTP request rather than document.cookie.
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    const confirmPath = isIOS ? '/auth/callback' : '/auth/confirm'
+
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim().toLowerCase(),
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/confirm`,
+        emailRedirectTo: `${window.location.origin}${confirmPath}`,
       },
     })
     setLoading(false)
