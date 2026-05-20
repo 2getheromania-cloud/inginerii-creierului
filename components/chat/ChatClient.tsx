@@ -24,6 +24,8 @@ export default function ChatClient({ initialMessages, userId, userRole }: Props)
   const [loadingOlder, setLoadingOlder] = useState(false)
   const [hasOlder, setHasOlder] = useState(initialMessages.length >= 60)
   const [sendError, setSendError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const latestTsRef = useRef<string>(
@@ -119,25 +121,44 @@ export default function ChatClient({ initialMessages, userId, userRole }: Props)
   }
 
   async function handleAdminAction(id: string, action: 'pin' | 'announce' | 'delete') {
+    if (action === 'delete') {
+      setConfirmDeleteId(id)
+      return
+    }
     const msg = messages.find(m => m.id === id)
     if (!msg) return
+    setActionError(null)
     const payload: Record<string, unknown> = {}
-    if (action === 'pin')     payload.is_pinned       = !msg.is_pinned
+    if (action === 'pin')      payload.is_pinned       = !msg.is_pinned
     if (action === 'announce') payload.is_announcement = !msg.is_announcement
-    if (action === 'delete')   payload.deleted         = true
 
     const res = await fetch(`/api/chat/messages/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
-    if (!res.ok) return
-
-    if (action === 'delete') {
-      setMessages(prev => prev.filter(m => m.id !== id))
-    } else {
-      setMessages(prev => prev.map(m => m.id === id ? { ...m, ...payload } as ChatMessage : m))
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      setActionError(data.error ?? 'Eroare la actualizarea mesajului.')
+      return
     }
+    setMessages(prev => prev.map(m => m.id === id ? { ...m, ...payload } as ChatMessage : m))
+  }
+
+  async function confirmDelete(id: string) {
+    setConfirmDeleteId(null)
+    setActionError(null)
+    const res = await fetch(`/api/chat/messages/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deleted: true }),
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      setActionError(data.error ?? 'Eroare la ștergerea mesajului.')
+      return
+    }
+    setMessages(prev => prev.filter(m => m.id !== id))
   }
 
   const isAdmin = userRole === 'admin'
@@ -197,11 +218,43 @@ export default function ChatClient({ initialMessages, userId, userRole }: Props)
         ))}
       </div>
 
+      {/* Action error */}
+      {actionError && (
+        <div className="px-4 py-2 text-sm text-red-600 bg-red-50 border-t border-red-100 flex-shrink-0">
+          {actionError}
+          <button onClick={() => setActionError(null)} className="ml-2 underline text-xs">ok</button>
+        </div>
+      )}
+
       {/* Send error */}
       {sendError && (
         <div className="px-4 py-2 text-sm text-red-600 bg-red-50 border-t border-red-100 flex-shrink-0">
           {sendError}
           <button onClick={() => setSendError(null)} className="ml-2 underline text-xs">ok</button>
+        </div>
+      )}
+
+      {/* Confirm delete dialog */}
+      {confirmDeleteId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl p-6 mx-4 max-w-sm w-full">
+            <p className="text-gray-800 font-semibold text-base mb-1">Ștergi mesajul?</p>
+            <p className="text-gray-500 text-sm mb-5">Această acțiune este ireversibilă.</p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setConfirmDeleteId(null)}
+                className="px-4 py-2 text-sm rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50"
+              >
+                Anulează
+              </button>
+              <button
+                onClick={() => confirmDelete(confirmDeleteId)}
+                className="px-4 py-2 text-sm rounded-xl bg-red-600 text-white hover:bg-red-700"
+              >
+                Șterge
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
