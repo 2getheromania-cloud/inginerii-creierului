@@ -1,7 +1,15 @@
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 const SELECT = '*, sender:profiles!sender_id(id, name, email, role)'
+
+function serviceClient() {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
+}
 
 export async function GET(request: NextRequest) {
   const supabase = createClient()
@@ -12,7 +20,9 @@ export async function GET(request: NextRequest) {
   const since  = searchParams.get('since')
   const before = searchParams.get('before')
 
-  let q = supabase
+  // Service client bypasses profiles RLS so the sender JOIN works for all users
+  const service = serviceClient()
+  let q = service
     .from('group_chat_messages')
     .select(SELECT)
     .is('deleted_at', null)
