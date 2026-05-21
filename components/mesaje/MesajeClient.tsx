@@ -81,7 +81,9 @@ function MessageBubble({
                 className={`block w-full text-left mb-2 rounded-lg px-2 py-1 border-l-4 ${
                   isOwn ? 'border-brand-300 bg-brand-700/20' : 'border-gray-300 bg-gray-50'
                 } active:opacity-70 transition-opacity`}>
-                <p className={`text-xs truncate ${isOwn ? 'text-brand-200' : 'text-gray-500'}`}>{msg.reply_to.content}</p>
+                <p className={`text-xs truncate ${isOwn ? 'text-brand-200' : 'text-gray-500'}`}>
+                  {msg.reply_to.content ?? '(mesaj original indisponibil)'}
+                </p>
               </button>
             )}
             <p className="text-[15px] md:text-sm whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>

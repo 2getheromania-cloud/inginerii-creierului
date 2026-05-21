@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import type { ChatMessage, ChatReplyPreview } from '@/lib/types'
 import ChatMessageBubble from './ChatMessage'
 import ChatInput from './ChatInput'
+import MessageErrorBoundary from './MessageErrorBoundary'
 import { createClient } from '@/lib/supabase/client'
 
 const POLL_MS = 20000 // fallback polling; realtime handles instant delivery
@@ -152,7 +153,7 @@ export default function ChatClient({ initialMessages, userId, userRole }: Props)
       id: msg.id,
       body: msg.body,
       image_url: msg.image_url,
-      sender: { name: msg.sender.name, email: msg.sender.email },
+      sender: { name: msg.sender?.name ?? null, email: msg.sender?.email ?? '' },
     })
   }
 
@@ -330,23 +331,24 @@ export default function ChatClient({ initialMessages, userId, userRole }: Props)
         )}
 
         {messages.map(msg => (
-          <div
-            key={msg.id}
-            ref={el => { if (el) messageRefs.current.set(msg.id, el); else messageRefs.current.delete(msg.id) }}
-          >
-            <ChatMessageBubble
-              message={msg}
-              isOwn={msg.sender_id === userId}
-              isAdmin={isAdmin}
-              currentUserId={userId}
-              isHighlighted={searchResultIds.length > 0 && searchResultIds[searchIdx] === msg.id}
-              onAdminAction={handleAdminAction}
-              onReact={handleReact}
-              onEdit={handleEdit}
-              onReply={handleReply}
-              onScrollToMessage={scrollToMessage}
-            />
-          </div>
+          <MessageErrorBoundary key={msg.id}>
+            <div
+              ref={el => { if (el) messageRefs.current.set(msg.id, el); else messageRefs.current.delete(msg.id) }}
+            >
+              <ChatMessageBubble
+                message={msg}
+                isOwn={msg.sender_id === userId}
+                isAdmin={isAdmin}
+                currentUserId={userId}
+                isHighlighted={searchResultIds.length > 0 && searchResultIds[searchIdx] === msg.id}
+                onAdminAction={handleAdminAction}
+                onReact={handleReact}
+                onEdit={handleEdit}
+                onReply={handleReply}
+                onScrollToMessage={scrollToMessage}
+              />
+            </div>
+          </MessageErrorBoundary>
         ))}
       </div>
 

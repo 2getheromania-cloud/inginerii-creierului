@@ -176,7 +176,7 @@ export default function ChatMessageBubble({
                 }`}
               >
                 <p className={`text-xs font-semibold truncate ${isOwn ? 'text-brand-200' : 'text-gray-500'}`}>
-                  {message.reply_to.sender.name || message.reply_to.sender.email}
+                  {message.reply_to.sender?.name || message.reply_to.sender?.email || 'Utilizator'}
                 </p>
                 <p className={`text-xs truncate ${isOwn ? 'text-brand-200' : 'text-gray-500'}`}>
                   {message.reply_to.body ?? '(imagine)'}

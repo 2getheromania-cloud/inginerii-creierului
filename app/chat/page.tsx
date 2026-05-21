@@ -23,14 +23,20 @@ export default async function ChatPage() {
 
   // Service client bypasses profiles RLS so the sender JOIN works for all users
   const service = serviceClient()
+  const SELECT = [
+    '*',
+    'sender:profiles!sender_id(id, name, email, role)',
+    'reactions:group_chat_reactions(emoji, user_id)',
+    'reply_to:group_chat_messages!reply_to_id(id, body, image_url, sender:profiles!sender_id(name, email))',
+  ].join(', ')
   const { data } = await service
     .from('group_chat_messages')
-    .select('*, sender:profiles!sender_id(id, name, email, role)')
+    .select(SELECT)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(60)
 
-  const initialMessages = ((data ?? []) as ChatMessage[]).reverse()
+  const initialMessages = ((data ?? []) as unknown as ChatMessage[]).reverse()
 
   return (
     <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">

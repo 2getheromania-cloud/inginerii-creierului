@@ -121,7 +121,7 @@ export default function ChatInput({ userId, onSend, sending, replyTo, onCancelRe
       {replyTo && (
         <div className="flex items-start gap-2 bg-brand-50 border-l-4 border-brand-400 rounded-lg px-3 py-1.5">
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-brand-700 truncate">{replyTo.sender.name || replyTo.sender.email}</p>
+            <p className="text-xs font-semibold text-brand-700 truncate">{replyTo.sender?.name || replyTo.sender?.email || 'Utilizator'}</p>
             <p className="text-xs text-gray-500 truncate">{replyTo.body ?? '(imagine)'}</p>
           </div>
           <button type="button" onClick={onCancelReply} className="text-gray-400 hover:text-gray-600 text-lg leading-none flex-shrink-0">×</button>
