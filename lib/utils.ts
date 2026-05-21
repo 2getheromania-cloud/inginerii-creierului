@@ -68,17 +68,38 @@ export function calcStreak(reports: { date: string }[], appStartDate?: string | 
 
 export function getVideoEmbedUrl(url: string): string | null {
   try {
-    const u = new URL(url)
-    if (u.hostname.includes('youtube.com') && u.searchParams.get('v'))
-      return `https://www.youtube.com/embed/${u.searchParams.get('v')}`
-    if (u.hostname === 'youtu.be')
-      return `https://www.youtube.com/embed${u.pathname}`
+    const u = new URL(url.trim())
+
+    // ── YouTube ──────────────────────────────────────────────────
+    if (u.hostname === 'youtu.be') {
+      const id = u.pathname.slice(1).split('?')[0]
+      if (id) return `https://www.youtube.com/embed/${id}`
+    }
+    if (u.hostname.includes('youtube.com')) {
+      // watch?v=ID
+      const v = u.searchParams.get('v')
+      if (v) return `https://www.youtube.com/embed/${v}`
+      // /shorts/ID
+      const shorts = u.pathname.match(/\/shorts\/([a-zA-Z0-9_-]+)/)
+      if (shorts) return `https://www.youtube.com/embed/${shorts[1]}`
+      // /embed/ID (already embed URL)
+      const embed = u.pathname.match(/\/embed\/([a-zA-Z0-9_-]+)/)
+      if (embed) return `https://www.youtube.com/embed/${embed[1]}`
+    }
+
+    // ── Vimeo ────────────────────────────────────────────────────
     if (u.hostname.includes('vimeo.com')) {
       const m = u.pathname.match(/\/(\d+)/)
       if (m) return `https://player.vimeo.com/video/${m[1]}`
     }
-    if (u.hostname.includes('loom.com') && u.pathname.startsWith('/share/'))
-      return `https://www.loom.com/embed/${u.pathname.replace('/share/', '')}`
+
+    // ── Loom ─────────────────────────────────────────────────────
+    if (u.hostname.includes('loom.com')) {
+      const share = u.pathname.match(/\/share\/([a-zA-Z0-9]+)/)
+      if (share) return `https://www.loom.com/embed/${share[1]}`
+      const emb = u.pathname.match(/\/embed\/([a-zA-Z0-9]+)/)
+      if (emb) return `https://www.loom.com/embed/${emb[1]}`
+    }
   } catch {}
   return null
 }
