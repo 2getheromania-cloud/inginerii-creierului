@@ -20,7 +20,7 @@ interface Props {
   days?: number
 }
 
-const COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899']
+const COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#a855f7']
 
 export default function ProgressChart({ reports, type = 'line', days = 30 }: Props) {
   const sorted = [...reports]

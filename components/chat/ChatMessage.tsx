@@ -1,5 +1,6 @@
 'use client'
 import type { ChatMessage } from '@/lib/types'
+import { linkifyText } from '@/lib/linkify'
 
 interface Props {
   message: ChatMessage
@@ -19,7 +20,7 @@ export default function ChatMessageBubble({ message, isOwn, isAdmin, onAdminActi
       <div className="w-full px-4 py-1 group">
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
           <p className="text-xs text-amber-600 font-semibold mb-1">📣 Anunț de la echipă</p>
-          {body && <p className="text-sm text-gray-800 whitespace-pre-wrap">{body}</p>}
+          {body && <p className="text-sm text-gray-800 whitespace-pre-wrap break-words">{linkifyText(body)}</p>}
           {image_url && (
             <a href={image_url} target="_blank" rel="noopener noreferrer">
               <img src={image_url} alt="imagine" className="mt-2 max-h-60 rounded-lg mx-auto cursor-pointer" loading="lazy" />
@@ -61,7 +62,7 @@ export default function ChatMessageBubble({ message, isOwn, isAdmin, onAdminActi
           {is_pinned && (
             <span className={`text-xs block mb-1 ${isOwn ? 'text-brand-200' : 'text-gray-400'}`}>📌 fixat</span>
           )}
-          {body && <p className="text-sm whitespace-pre-wrap break-words">{body}</p>}
+          {body && <p className="text-sm whitespace-pre-wrap break-words">{linkifyText(body, isOwn ? 'underline break-all opacity-80 hover:opacity-100 text-white' : 'underline break-all opacity-80 hover:opacity-100')}</p>}
           {image_url && (
             <a href={image_url} target="_blank" rel="noopener noreferrer">
               <img

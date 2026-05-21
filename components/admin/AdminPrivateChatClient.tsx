@@ -1,7 +1,10 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { linkifyText } from '@/lib/linkify'
 import type { PrivateMessage } from '@/lib/types'
+
+const QUICK_EMOJIS = ['😊', '❤️', '🙏', '🌿', '💪', '🔥', '👏']
 
 interface Props {
   conversationId: string
@@ -140,7 +143,7 @@ export default function AdminPrivateChatClient({ conversationId, currentUserId }
                 ${isOptimistic ? 'opacity-70' : ''}
               `}>
                 <p className="text-[15px] md:text-sm whitespace-pre-wrap break-words leading-relaxed">
-                  {msg.content}
+                  {linkifyText(msg.content, isOwn ? 'underline break-all opacity-80 hover:opacity-100 text-white' : 'underline break-all opacity-80 hover:opacity-100 text-gray-700')}
                 </p>
                 <p
                   className={`text-[11px] mt-1 text-right ${isOwn ? 'text-brand-200' : 'text-gray-400'}`}
@@ -162,10 +165,25 @@ export default function AdminPrivateChatClient({ conversationId, currentUserId }
         </div>
       )}
 
+      {/* Emoji bar */}
+      <div className="flex gap-1 px-3 pt-2 pb-1 bg-white border-t border-gray-100 flex-shrink-0">
+        {QUICK_EMOJIS.map(emoji => (
+          <button
+            key={emoji}
+            type="button"
+            onClick={() => setText(prev => prev + emoji)}
+            className="text-xl leading-none hover:scale-125 active:scale-110 transition-transform"
+            aria-label={emoji}
+          >
+            {emoji}
+          </button>
+        ))}
+      </div>
+
       {/* Input area */}
       <form
         onSubmit={handleSend}
-        className="border-t border-gray-100 bg-white px-3 py-3 flex gap-2 items-end flex-shrink-0"
+        className="bg-white px-3 pb-3 flex gap-2 items-end flex-shrink-0"
       >
         <textarea
           ref={textareaRef}

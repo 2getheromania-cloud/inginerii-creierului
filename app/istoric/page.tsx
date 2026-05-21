@@ -24,7 +24,10 @@ export default async function IstoricPage() {
     <AppShell profile={profile}>
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-gray-900">Istoric & Progres</h1>
-        <IstoricClient reports={(reports ?? []) as DailyReport[]} />
+        <IstoricClient
+          reports={(reports ?? []) as DailyReport[]}
+          appStartDate={profile.app_start_date ?? null}
+        />
       </div>
     </AppShell>
   )

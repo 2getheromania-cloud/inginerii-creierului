@@ -162,6 +162,9 @@ export const SLIDER_LABELS: Record<string, string> = {
   stres:          'Nivel stres',
   stare_generala: 'Stare generală',
   productivitate: 'Productivitate',
+  digestie:       'Digestie',
+  claritate:      'Claritate mentală',
+  dispozitie:     'Dispoziție emoțională',
 }
 
 export const DEFAULT_CHECKS = {
@@ -182,4 +185,7 @@ export const DEFAULT_SLIDERS = {
   stres: 5,
   stare_generala: 5,
   productivitate: 5,
+  digestie: 5,
+  claritate: 5,
+  dispozitie: 5,
 }

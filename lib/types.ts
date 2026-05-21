@@ -55,6 +55,9 @@ export interface DailySliders {
   stres: number
   stare_generala: number
   productivitate: number
+  digestie?: number
+  claritate?: number
+  dispozitie?: number
 }
 
 export interface Symptom {

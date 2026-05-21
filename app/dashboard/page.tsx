@@ -5,6 +5,8 @@ import AppShell from '@/components/layout/AppShell'
 import DailyChecklistForm from '@/components/dashboard/DailyChecklistForm'
 import AdminMessageCard from '@/components/dashboard/AdminMessageCard'
 import MotivationalCard from '@/components/dashboard/MotivationalCard'
+import WeeklySummaryCard from '@/components/dashboard/WeeklySummaryCard'
+import CommunityWinsCard from '@/components/dashboard/CommunityWinsCard'
 import { todayISO, calcStreak } from '@/lib/utils'
 import { getPhaseFromWeek, PHASE_COLORS, PROTOCOL_LABELS, PROTOCOL_LINKS } from '@/lib/program'
 import type { DailyReport, ProtocolFlags, AdminMessage } from '@/lib/types'
@@ -40,7 +42,7 @@ export default async function DashboardPage() {
     { data: allReports },
   ] = await Promise.all([
     supabase.from('daily_reports').select('*').eq('user_id', user.id).eq('date', today).single(),
-    supabase.from('daily_reports').select('date').eq('user_id', user.id).gte('date', sevenDaysAgoStr),
+    supabase.from('daily_reports').select('date, sliders').eq('user_id', user.id).gte('date', sevenDaysAgoStr),
     supabase.from('admin_messages').select('*').eq('is_active', true).lte('published_at', new Date().toISOString()).order('published_at', { ascending: false }),
     supabase.rpc('get_group_stats_last7'),
     supabase.from('daily_reports').select('date').eq('user_id', user.id).order('date', { ascending: false }).limit(60),
@@ -127,6 +129,19 @@ export default async function DashboardPage() {
             </div>
           </div>
         )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <WeeklySummaryCard
+            reports={recentFiltered as { date: string; sliders?: Record<string, number> }[]}
+            streak={streak}
+          />
+          <CommunityWinsCard
+            avgReports={groupStats?.avg_reports ?? null}
+            maxReports={groupStats?.max_reports ?? null}
+            totalUsers={groupStats?.total_users ?? null}
+            userDaysCompleted={userDaysCompleted}
+          />
+        </div>
 
         <DailyChecklistForm
           profile={profile}
