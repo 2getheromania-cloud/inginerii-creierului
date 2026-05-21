@@ -21,57 +21,66 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // IMPORTANT: getUser() refresh-uiește sesiunea și poate seta cookie-uri noi.
-  // Orice redirect returnat trebuie să copieze acele cookie-uri,
-  // altfel sesiunea pare invalidă pe cererea următoare → bucla de redirect.
-  const { data: { user } } = await supabase.auth.getUser()
-  const pathname = request.nextUrl.pathname
-
-  // Copiază cookie-urile Supabase pe orice redirect — fix pentru bucla de redirect
   function redirectWithCookies(url: URL) {
     const res = NextResponse.redirect(url)
     supabaseResponse.cookies.getAll().forEach(c =>
-      res.cookies.set(c.name, c.value, { path: c.path, sameSite: c.sameSite as 'lax' | 'strict' | 'none' | undefined, httpOnly: c.httpOnly, secure: c.secure })
+      res.cookies.set(c.name, c.value, {
+        path: c.path,
+        sameSite: c.sameSite as 'lax' | 'strict' | 'none' | undefined,
+        httpOnly: c.httpOnly,
+        secure: c.secure,
+      })
     )
     return res
   }
 
-  const protectedPaths = ['/dashboard', '/istoric', '/resurse', '/profil', '/admin', '/chat']
-  const isProtected = protectedPaths.some(p => pathname.startsWith(p))
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    const pathname = request.nextUrl.pathname
 
-  // Utilizator neautentificat încearcă să acceseze rută protejată
-  if (isProtected && !user) {
-    return redirectWithCookies(new URL('/', request.url))
-  }
+    const protectedPaths = [
+      '/dashboard', '/istoric', '/resurse', '/profil',
+      '/admin', '/chat', '/documente', '/mesaje',
+    ]
+    const isProtected = protectedPaths.some(p => pathname.startsWith(p))
 
-  // Rută de admin accesată de non-admin
-  if (pathname.startsWith('/admin') && user) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-    if (profile?.role !== 'admin') {
-      return redirectWithCookies(new URL('/dashboard', request.url))
+    if (isProtected && !user) {
+      return redirectWithCookies(new URL('/', request.url))
     }
-  }
 
-  // Utilizator autentificat la pagina de login → redirecționează
-  if (pathname === '/' && user) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-    const dest = profile?.role === 'admin' ? '/admin' : '/dashboard'
-    return redirectWithCookies(new URL(dest, request.url))
+    if (pathname.startsWith('/admin') && user) {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+      if (error) {
+        console.error('[middleware] profile fetch error (admin check):', error.message)
+      } else if (profile?.role !== 'admin') {
+        return redirectWithCookies(new URL('/dashboard', request.url))
+      }
+    }
+
+    if (pathname === '/' && user) {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+      if (error) {
+        console.error('[middleware] profile fetch error (login redirect):', error.message)
+      } else {
+        const dest = profile?.role === 'admin' ? '/admin' : '/dashboard'
+        return redirectWithCookies(new URL(dest, request.url))
+      }
+    }
+  } catch (err) {
+    console.error('[middleware] unexpected error:', err)
   }
 
   return supabaseResponse
 }
 
 export const config = {
-  // Exclude: fișiere statice, /auth/* (callback magic link), /api/* (cron + API routes)
-  // Fără excludere pentru /auth/, middleware-ul ar putea șterge code-verifier-ul PKCE
   matcher: ['/((?!_next/static|_next/image|favicon.ico|auth/|api/).*)'],
 }
