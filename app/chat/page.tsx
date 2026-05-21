@@ -34,6 +34,10 @@ export default async function ChatPage() {
 
   return (
     <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
+      {/* DEPLOYMENT VERIFICATION — remove after confirming mobile v3 is live */}
+      <div style={{ background: '#dc2626', color: 'white', textAlign: 'center', padding: '6px', fontSize: 12, fontWeight: 800, letterSpacing: 2, flexShrink: 0, zIndex: 100 }}>
+        ✅ MOBILE CHAT V3 ACTIVE
+      </div>
       <Navbar profile={profile} />
       <ChatClient
         initialMessages={initialMessages}
