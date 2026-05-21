@@ -27,6 +27,8 @@ export default async function DashboardPage() {
     )
   }
 
+  if (profile.role === 'admin') redirect('/admin')
+
   const today = todayISO()
   const phase = getPhaseFromWeek(profile.week)
   const flags = profile.flags as ProtocolFlags
@@ -94,7 +96,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Onboarding card — only for cursants that haven't completed it */}
-        {profile.role !== 'admin' && !profile.onboarding_completed && (
+        {!profile.onboarding_completed && (
           <OnboardingCard />
         )}
 
