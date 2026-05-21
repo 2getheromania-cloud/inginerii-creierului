@@ -39,7 +39,7 @@ function MessageBubble({
   const time = new Date(msg.created_at).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })
   const reactionGroups = groupReactions(msg.reactions, userId)
   const isOptimistic = msg.id.startsWith('tmp-')
-  const replyContent = msg.reply_to?.content || '(mesaj original indisponibil)'
+  const replyContent = msg.reply_to?.content || 'Mesaj original indisponibil'
 
   async function saveEdit() {
     const trimmed = draft.trim()
@@ -77,10 +77,10 @@ function MessageBubble({
           <div className={`max-w-full rounded-2xl px-4 py-2.5 transition-colors ${
             isOwn ? 'bg-brand-600 text-white rounded-br-sm' : 'bg-white shadow-sm text-gray-900 rounded-bl-sm'
           } ${isOptimistic ? 'opacity-70' : ''} ${isHighlighted ? 'ring-2 ring-brand-400' : ''}`}>
-            {msg.reply_to && (
+            {msg.reply_to_id && (
               <button
                 type="button"
-                onClick={() => onScrollToMessage(msg.reply_to!.id)}
+                onClick={() => onScrollToMessage(msg.reply_to?.id ?? msg.reply_to_id!)}
                 style={{
                   display: 'block', width: '100%', textAlign: 'left',
                   marginBottom: 6, borderRadius: 8, padding: '5px 8px',

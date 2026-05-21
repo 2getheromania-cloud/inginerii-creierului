@@ -104,13 +104,13 @@ export default function ChatMessageBubble({
     setIsEditing(false)
   }
 
-  // Reply card — computed before JSX to keep render clean
+  // Reply card — only computed/used when reply_to_id is set
   const replyAuthor = message.reply_to?.sender?.name
     || message.reply_to?.sender?.email
-    || 'Mesaj original'
+    || null
   const replyContent = message.reply_to?.body
     || (message.reply_to?.image_url ? '📷 Imagine' : null)
-    || 'Mesaj original'
+    || 'Mesaj original indisponibil'
 
   if (is_announcement) {
     return (
@@ -175,10 +175,10 @@ export default function ChatMessageBubble({
                 ? 'bg-amber-50 text-gray-900 border border-amber-200 rounded-bl-sm'
                 : 'bg-white text-gray-900 shadow-sm rounded-bl-sm'
           } ${isHighlighted ? 'ring-2 ring-brand-400' : ''}`}>
-            {message.reply_to && (
+            {message.reply_to_id && (
               <button
                 type="button"
-                onClick={() => onScrollToMessage(message.reply_to!.id)}
+                onClick={() => onScrollToMessage(message.reply_to?.id ?? message.reply_to_id!)}
                 style={{
                   display: 'block', width: '100%', textAlign: 'left',
                   marginBottom: 6, borderRadius: 8, padding: '5px 8px',
@@ -190,13 +190,15 @@ export default function ChatMessageBubble({
                   ),
                 }}
               >
-                <p style={{
-                  fontSize: 11, fontWeight: 600, marginBottom: 2, lineHeight: 1.3,
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  color: isOwn ? 'rgba(255,255,255,0.9)' : '#16a34a',
-                }}>
-                  {replyAuthor}
-                </p>
+                {replyAuthor && (
+                  <p style={{
+                    fontSize: 11, fontWeight: 600, marginBottom: 2, lineHeight: 1.3,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    color: isOwn ? 'rgba(255,255,255,0.9)' : '#16a34a',
+                  }}>
+                    {replyAuthor}
+                  </p>
+                )}
                 <p style={{
                   fontSize: 11, lineHeight: 1.35, margin: 0,
                   overflow: 'hidden', display: '-webkit-box',
