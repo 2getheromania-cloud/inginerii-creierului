@@ -38,14 +38,18 @@ export function getSliderColor(value: number): string {
   return 'text-green-500'
 }
 
-export function calcStreak(reports: { date: string }[]): number {
+export function calcStreak(reports: { date: string }[], appStartDate?: string | null): number {
   if (!reports.length) return 0
   const today = todayISO()
   const yesterday = new Date()
   yesterday.setDate(yesterday.getDate() - 1)
   const yesterdayISO = yesterday.toISOString().split('T')[0]
 
-  const dateSet = new Set(reports.map(r => r.date))
+  // Ignore reports before monitoring started
+  const eligible = appStartDate ? reports.filter(r => r.date >= appStartDate) : reports
+  if (!eligible.length) return 0
+
+  const dateSet = new Set(eligible.map(r => r.date))
 
   const startDate = dateSet.has(today) ? today : dateSet.has(yesterdayISO) ? yesterdayISO : null
   if (!startDate) return 0
@@ -54,6 +58,7 @@ export function calcStreak(reports: { date: string }[]): number {
   const cursor = new Date(startDate)
   while (true) {
     const iso = cursor.toISOString().split('T')[0]
+    if (appStartDate && iso < appStartDate) break
     if (!dateSet.has(iso)) break
     streak++
     cursor.setDate(cursor.getDate() - 1)

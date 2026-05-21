@@ -12,6 +12,9 @@ interface Props {
   profile: Profile
   existingReport: DailyReport | null
   streak: number
+  userId: string
+  allowBackfill?: boolean
+  appStartDate?: string | null
 }
 
 const PHASE_MESSAGES: Record<ProgramPhase, string> = {
@@ -23,12 +26,13 @@ const PHASE_MESSAGES: Record<ProgramPhase, string> = {
   'Faza 4':    `Incredibil! Ești în faza finală. Mâine: menține fereastra de post și hidratează-te bine.`,
 }
 
-export default function DailyChecklistForm({ profile, existingReport, streak }: Props) {
+export default function DailyChecklistForm({ profile, existingReport, streak, userId, allowBackfill, appStartDate }: Props) {
   const today = todayISO()
   const phase = getPhaseFromWeek(profile.week)
   const recipeLink = PHASE_RECIPE_LINKS[phase]
   const supabase = createClient()
 
+  const [selectedDate, setSelectedDate] = useState(today)
   const [checks, setChecks] = useState<DailyChecks>(
     existingReport?.checks ?? (DEFAULT_CHECKS as DailyChecks)
   )
@@ -42,7 +46,38 @@ export default function DailyChecklistForm({ profile, existingReport, streak }: 
   const [showConfirm, setShowConfirm] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(!!existingReport)
+  const [loadingDate, setLoadingDate] = useState(false)
   const [error, setError] = useState('')
+
+  async function handleDateChange(date: string) {
+    setSelectedDate(date)
+    setSaved(false)
+    setShowConfirm(false)
+    setError('')
+
+    if (date === today) {
+      setChecks(existingReport?.checks ?? DEFAULT_CHECKS as DailyChecks)
+      setSliders(existingReport?.sliders ?? DEFAULT_SLIDERS)
+      setSymptoms(existingReport?.symptoms ?? [])
+      setNote(existingReport?.note ?? '')
+      setSaved(!!existingReport)
+      return
+    }
+
+    setLoadingDate(true)
+    const { data } = await supabase
+      .from('daily_reports')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('date', date)
+      .maybeSingle()
+    setLoadingDate(false)
+    setChecks((data?.checks as DailyChecks) ?? DEFAULT_CHECKS as DailyChecks)
+    setSliders((data?.sliders as DailySliders) ?? DEFAULT_SLIDERS)
+    setSymptoms((data?.symptoms as Symptom[]) ?? [])
+    setNote((data?.note as string) ?? '')
+    setSaved(!!data)
+  }
 
   const completionPct = calcCompletionPct(checks as unknown as Record<string, unknown>)
 
@@ -54,22 +89,18 @@ export default function DailyChecklistForm({ profile, existingReport, streak }: 
   async function handleSave() {
     setSaving(true)
     setError('')
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setError('Sesiunea a expirat.'); setSaving(false); return }
-
-    const payload = {
-      user_id: user.id,
-      date: today,
-      checks,
-      sliders,
-      symptoms,
-      note: note || null,
-      saved_at: new Date().toISOString(),
-    }
 
     const { error: err } = await supabase
       .from('daily_reports')
-      .upsert(payload, { onConflict: 'user_id,date' })
+      .upsert({
+        user_id: userId,
+        date: selectedDate,
+        checks,
+        sliders,
+        symptoms,
+        note: note || null,
+        saved_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,date' })
 
     setSaving(false)
     if (err) { setError(err.message); return }
@@ -106,11 +137,44 @@ export default function DailyChecklistForm({ profile, existingReport, streak }: 
 
   return (
     <div className="space-y-6">
+      {/* Backfill date selector */}
+      {allowBackfill && appStartDate && (
+        <div className="card flex flex-wrap items-center gap-4 py-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Completezi pentru:</label>
+            <input
+              type="date"
+              min={appStartDate}
+              max={today}
+              value={selectedDate}
+              onChange={e => handleDateChange(e.target.value)}
+              disabled={loadingDate}
+              className="input w-auto text-sm py-1.5"
+            />
+            {loadingDate && <span className="text-xs text-gray-400">Se încarcă...</span>}
+          </div>
+          {selectedDate !== today && (
+            <span className="text-xs font-medium text-orange-700 bg-orange-50 border border-orange-200 px-2 py-1 rounded-lg">
+              Completare retroactivă
+            </span>
+          )}
+          {selectedDate !== today && (
+            <button
+              type="button"
+              onClick={() => handleDateChange(today)}
+              className="text-xs text-brand-600 hover:underline"
+            >
+              ← Înapoi la azi
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Header progress */}
       <div className="card">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Raport zilnic — {formatDate(today)}</h2>
+            <h2 className="text-lg font-bold text-gray-900">Raport zilnic — {formatDate(selectedDate)}</h2>
             <p className="text-sm text-gray-500">Faza curentă: <span className="font-medium text-brand-700">{phase}</span> · Săptămâna {profile.week}</p>
           </div>
           <div className="text-right">

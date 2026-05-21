@@ -10,6 +10,8 @@ export interface Profile {
   saved_dates: Record<string, string>
   created_at: string
   reminder_time?: string
+  app_start_date?: string | null   // YYYY-MM-DD: monitoring starts here; null = no restriction
+  allow_backfill?: boolean          // can cursant submit reports for past dates?
 }
 
 export interface ProtocolFlags {

@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
 
   const service = createServiceClient()
   const adminEmail = process.env.ADMIN_EMAIL!
+  const today = new Date().toISOString().split('T')[0]
 
   const { data: stats } = await service
     .from('admin_stats')
@@ -18,8 +19,20 @@ export async function GET(request: NextRequest) {
 
   if (!stats?.length) return NextResponse.json({ ok: true, alerts: 0 })
 
+  // Fetch app_start_date for these cursants to avoid alerting on those not yet tracking
+  const { data: profiles } = await service
+    .from('profiles')
+    .select('id, app_start_date')
+    .in('id', stats.map(s => s.id))
+
+  const startMap = new Map((profiles ?? []).map(p => [p.id, p.app_start_date as string | null]))
+
   let alerts = 0
   for (const c of stats) {
+    const appStart = startMap.get(c.id) ?? null
+    // Skip if monitoring hasn't started or started today (no days to be inactive for)
+    if (!appStart || appStart >= today) continue
+
     try {
       await sendInactivityAlert(adminEmail, c.name, c.email, c.days_since_report)
       await service.from('notifications').insert({

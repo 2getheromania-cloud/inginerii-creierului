@@ -46,8 +46,16 @@ export default async function DashboardPage() {
     supabase.from('daily_reports').select('date').eq('user_id', user.id).order('date', { ascending: false }).limit(60),
   ])
 
-  const userDaysCompleted = recentReports?.length ?? 0
-  const streak = calcStreak(allReports ?? [])
+  const appStartDate = profile.app_start_date ?? null
+  const allowBackfill = profile.allow_backfill ?? false
+
+  // Count completed days in last 7 days only from app_start_date onwards
+  const recentFiltered = appStartDate
+    ? (recentReports ?? []).filter(r => r.date >= appStartDate)
+    : (recentReports ?? [])
+  const userDaysCompleted = recentFiltered.length
+
+  const streak = calcStreak(allReports ?? [], appStartDate)
   const groupStats = groupStatsRaw as { avg_reports: number; max_reports: number; total_users: number } | null
 
   // Filter messages to only those relevant to this cursant
@@ -124,6 +132,9 @@ export default async function DashboardPage() {
           profile={profile}
           existingReport={todayReport as DailyReport | null}
           streak={streak}
+          userId={user.id}
+          allowBackfill={allowBackfill}
+          appStartDate={appStartDate}
         />
       </div>
     </AppShell>
