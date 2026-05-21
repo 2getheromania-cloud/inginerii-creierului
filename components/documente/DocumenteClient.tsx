@@ -1,6 +1,5 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import type { Document } from '@/lib/types'
 
 interface Props {
@@ -17,94 +16,90 @@ export default function DocumenteClient({ userId, isAdmin, targetUserId }: Props
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
-  const supabase = createClient()
 
   const targetId = targetUserId ?? userId
 
-  async function loadDocuments() {
-    const params = targetId !== userId ? `?user_id=${targetId}` : ''
-    const res = await fetch(`/api/documents${params}`)
-    if (res.ok) {
-      const data = await res.json()
-      setDocuments(data)
-    }
-  }
-
   useEffect(() => {
-    loadDocuments()
-  }, [targetId])
+    const params = targetId !== userId ? `?user_id=${targetId}` : ''
+    fetch(`/api/documents${params}`)
+      .then(r => r.ok ? r.json() : r.json().then((d: { error?: string }) => { throw new Error(d.error ?? 'Eroare la încărcare.') }))
+      .then(setDocuments)
+      .catch(err => setError(err.message))
+  }, [targetId, userId])
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
     if (file.size > 10 * 1024 * 1024) {
-      setError('Fișierul depășește 10MB.')
-      return
-    }
-    setUploading(true)
-    setError(null)
-
-    const filePath = `${targetId}/${Date.now()}_${file.name}`
-    const { error: uploadErr } = await supabase.storage.from('documents').upload(filePath, file)
-    if (uploadErr) {
-      setError(uploadErr.message)
-      setUploading(false)
+      setError('Fișierul depășește 10 MB.')
       if (fileRef.current) fileRef.current.value = ''
       return
     }
 
-    const res = await fetch('/api/documents', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        user_id: targetId,
-        name: file.name,
-        file_path: filePath,
-        size_bytes: file.size,
-      }),
-    })
+    setUploading(true)
+    setError(null)
 
-    setUploading(false)
-    if (fileRef.current) fileRef.current.value = ''
+    const form = new FormData()
+    form.append('file', file)
+    form.append('user_id', targetId)
 
-    if (!res.ok) {
-      const d = await res.json().catch(() => ({}))
-      setError(d.error ?? 'Eroare la salvarea documentului.')
-      return
+    try {
+      const res = await fetch('/api/documents', { method: 'POST', body: form })
+      const data = await res.json()
+
+      if (!res.ok) {
+        setError(data.error ?? 'Eroare la încărcare.')
+        return
+      }
+
+      // Optimistic local prepend — no refetch needed
+      setDocuments(prev => [data as Document, ...prev])
+    } catch {
+      setError('Eroare de rețea. Încearcă din nou.')
+    } finally {
+      setUploading(false)
+      if (fileRef.current) fileRef.current.value = ''
     }
-
-    await loadDocuments()
   }
 
   async function handleDownload(doc: Document) {
-    const { data, error: signErr } = await supabase.storage
-      .from('documents')
-      .createSignedUrl(doc.file_path, 3600)
-    if (signErr || !data?.signedUrl) {
-      setError('Nu s-a putut genera link-ul de descărcare.')
-      return
+    setError(null)
+    try {
+      const res = await fetch(`/api/documents/${doc.id}`)
+      const data = await res.json()
+      if (!res.ok || !data.url) {
+        setError(data.error ?? 'Nu s-a putut genera link-ul de descărcare.')
+        return
+      }
+      window.open(data.url, '_blank')
+    } catch {
+      setError('Eroare la descărcare.')
     }
-    window.open(data.signedUrl, '_blank')
   }
 
   async function handleDelete(id: string) {
     if (!confirm('Ștergi acest document?')) return
-    const res = await fetch(`/api/documents/${id}`, { method: 'DELETE' })
-    if (res.ok) {
-      setDocuments(prev => prev.filter(d => d.id !== id))
-    } else {
-      const d = await res.json().catch(() => ({}))
-      setError(d.error ?? 'Eroare la ștergere.')
+    setError(null)
+    try {
+      const res = await fetch(`/api/documents/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        setDocuments(prev => prev.filter(d => d.id !== id))
+      } else {
+        const d = await res.json().catch(() => ({})) as { error?: string }
+        setError(d.error ?? 'Eroare la ștergere.')
+      }
+    } catch {
+      setError('Eroare de rețea.')
     }
   }
 
   return (
     <div className="space-y-4">
       {error && (
-        <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">
-          {error}
-          <button onClick={() => setError(null)} className="ml-2 underline text-xs">ok</button>
-        </p>
+        <div className="flex items-start gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+          <span className="flex-1">{error}</span>
+          <button onClick={() => setError(null)} className="underline text-xs flex-shrink-0">ok</button>
+        </div>
       )}
 
       <div>
@@ -116,13 +111,13 @@ export default function DocumenteClient({ userId, isAdmin, targetUserId }: Props
           onChange={handleUpload}
         />
         <button
-          onClick={() => fileRef.current?.click()}
+          onClick={() => { setError(null); fileRef.current?.click() }}
           disabled={uploading}
           className="btn-primary"
         >
           {uploading ? 'Se încarcă...' : 'Încarcă document'}
         </button>
-        <p className="text-xs text-gray-400 mt-1">PDF, JPG, PNG, DOCX — max 10MB</p>
+        <p className="text-xs text-gray-400 mt-1">PDF, JPG, PNG, DOCX — max 10 MB</p>
       </div>
 
       {documents.length === 0 ? (
@@ -134,15 +129,13 @@ export default function DocumenteClient({ userId, isAdmin, targetUserId }: Props
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-gray-800 truncate">{doc.name}</p>
                 <p className="text-xs text-gray-400">
-                  {doc.size_bytes ? fmtSize(doc.size_bytes) : ''}{' '}
-                  &middot; {new Date(doc.created_at).toLocaleDateString('ro-RO')}
+                  {doc.size_bytes ? fmtSize(doc.size_bytes) : ''}
+                  {doc.size_bytes ? ' · ' : ''}
+                  {new Date(doc.created_at).toLocaleDateString('ro-RO')}
                 </p>
               </div>
               <div className="flex gap-2 flex-shrink-0 ml-3">
-                <button
-                  onClick={() => handleDownload(doc)}
-                  className="btn-secondary text-xs py-1 px-3"
-                >
+                <button onClick={() => handleDownload(doc)} className="btn-secondary text-xs py-1 px-3">
                   Descarcă
                 </button>
                 {(isAdmin || doc.uploaded_by === userId) && (
