@@ -5,12 +5,27 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 @layer base {
-  html { font-family: 'Inter', system-ui, sans-serif; }
-  body { @apply bg-gray-50 text-gray-900; }
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+  body {
+    @apply bg-gray-50 text-gray-900;
+    overflow-x: hidden;
+    max-width: 100%;
+  }
 }
 
+/* Hide scrollbar but keep scrollability (used in tab nav) */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar { display: none; }
+
 @layer components {
-  .card { @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-6; }
+  .card { @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-6 min-w-0 break-words; }
   .btn-primary {
     @apply bg-brand-600 hover:bg-brand-700 text-white font-semibold
            px-5 py-2.5 rounded-xl transition-colors duration-150
