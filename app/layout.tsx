@@ -6,19 +6,20 @@ export const metadata: Metadata = {
   title: 'Inginerii Creierului — Program Microbiom',
   description: 'Programul de refacere a microbiomului intestinal Inginerii Creierului',
   icons: {
-    icon: '/favicon.ico',
-    apple: '/icon-192.svg',
+    icon: '/favicon.png',
+    apple: '/apple-touch-icon.png',
+    shortcut: '/favicon.png',
   },
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default',
-    title: 'IC Microbiom',
+    statusBarStyle: 'black-translucent',
+    title: 'Inginerii Creierului',
   },
 }
 
 export const viewport: Viewport = {
-  themeColor: '#16a34a',
+  themeColor: '#1a3a2a',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
