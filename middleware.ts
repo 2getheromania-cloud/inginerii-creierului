@@ -2,6 +2,11 @@ import { createServerClient, type SetAllCookies } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname
+  if (pathname.startsWith('/documente') || pathname.startsWith('/mesaje')) {
+    return NextResponse.next()
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -36,7 +41,6 @@ export async function middleware(request: NextRequest) {
 
   try {
     const { data: { user } } = await supabase.auth.getUser()
-    const pathname = request.nextUrl.pathname
 
     const protectedPaths = [
       '/dashboard', '/istoric', '/resurse', '/profil',
