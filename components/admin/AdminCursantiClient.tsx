@@ -194,6 +194,7 @@ export default function AdminCursantiClient({
               <th className="text-left px-4 py-3">Cursant</th>
               <th className="text-left px-4 py-3">Fază / Săpt.</th>
               <th className="text-left px-4 py-3">Protocoale</th>
+              <th className="text-left px-4 py-3 hidden lg:table-cell">Onboarding</th>
               <th className="text-left px-4 py-3">Ultimul raport</th>
               <th className="text-left px-4 py-3">Ultimele 30z</th>
               <th className="px-4 py-3"></th>
@@ -234,6 +235,11 @@ export default function AdminCursantiClient({
                           <span key={p} className="badge bg-amber-100 text-amber-700 text-xs">{p}</span>
                         ))}
                     </div>
+                  </td>
+                  <td className="px-4 py-4 hidden lg:table-cell">
+                    <span className={`badge text-xs ${c.onboarding_completed ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
+                      {c.onboarding_completed ? 'Complet' : 'Pending'}
+                    </span>
                   </td>
                   <td className="px-4 py-4">
                     {c.last_report_date ? (

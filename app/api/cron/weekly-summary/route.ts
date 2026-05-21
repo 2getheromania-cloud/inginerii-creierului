@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     if (!reports?.length) continue
 
     const avg: Record<string, number> = {}
-    const keys = ['energie', 'somn', 'stres', 'stare_generala', 'productivitate']
+    const keys = ['energie', 'somn', 'stres', 'stare_generala', 'productivitate', 'digestie', 'claritate', 'dispozitie']
     for (const key of keys) {
       avg[key] = reports.reduce((s, r) => s + (r.sliders[key] ?? 0), 0) / reports.length
     }

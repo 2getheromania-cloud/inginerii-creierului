@@ -8,6 +8,7 @@ import MotivationalCard from '@/components/dashboard/MotivationalCard'
 import WeeklySummaryCard from '@/components/dashboard/WeeklySummaryCard'
 import CommunityWinsCard from '@/components/dashboard/CommunityWinsCard'
 import BrowserNotifCard from '@/components/dashboard/BrowserNotifCard'
+import OnboardingCard from '@/components/dashboard/OnboardingCard'
 import { todayISO, calcStreak } from '@/lib/utils'
 import { getPhaseFromWeek, PHASE_COLORS, PROTOCOL_LABELS, PROTOCOL_LINKS } from '@/lib/program'
 import type { DailyReport, ProtocolFlags, AdminMessage } from '@/lib/types'
@@ -87,6 +88,11 @@ export default async function DashboardPage() {
             </span>
           </div>
         </div>
+
+        {/* Onboarding card — only for cursants that haven't completed it */}
+        {profile.role !== 'admin' && !profile.onboarding_completed && (
+          <OnboardingCard />
+        )}
 
         {/* Admin messages (only relevant ones) */}
         {messages.map(m => (

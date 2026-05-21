@@ -13,6 +13,7 @@ export interface Profile {
   app_start_date?: string | null
   allow_backfill?: boolean
   community_last_seen_at?: string | null
+  onboarding_completed?: boolean | null
 }
 
 export interface ProtocolFlags {
@@ -163,4 +164,20 @@ export interface AdminStats {
   last_saved_at: string | null
   days_since_report: number | null
   reports_last_30_days: number
+  onboarding_completed: boolean | null
+}
+
+export type VideoCategory = 'somn' | 'microbiom' | 'stres' | 'nutritie' | 'mindset' | 'tiroida' | 'general'
+
+export interface VideoResource {
+  id: string
+  title: string
+  description: string | null
+  video_url: string
+  category: VideoCategory
+  target_type: 'all' | 'phase' | 'protocol'
+  target_value: string | null
+  is_active: boolean
+  sort_order: number
+  created_at: string
 }

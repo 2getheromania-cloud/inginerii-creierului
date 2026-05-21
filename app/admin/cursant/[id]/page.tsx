@@ -5,6 +5,7 @@ import AppShell from '@/components/layout/AppShell'
 import ProgressChart from '@/components/charts/ProgressChart'
 import AdminCursantClient from '@/components/admin/AdminCursantClient'
 import AdminPrivateChatClient from '@/components/admin/AdminPrivateChatClient'
+import AdminInsightCard from '@/components/admin/AdminInsightCard'
 import DeleteUserButton from '@/components/admin/DeleteUserButton'
 import DocumenteClient from '@/components/documente/DocumenteClient'
 import { formatDate } from '@/lib/utils'
@@ -76,6 +77,12 @@ export default async function AdminCursantPage({ params }: { params: { id: strin
             <span className="badge bg-gray-100 text-gray-700 text-sm px-3 py-1">Săpt. {cursantProfile.week}/24</span>
           </div>
         </div>
+
+        {/* ── Sinteză inteligentă ── */}
+        <AdminInsightCard
+          reports7={(reports7 ?? []) as DailyReport[]}
+          reports30={(reports30 ?? []) as DailyReport[]}
+        />
 
         {/* ── Edit profile ── */}
         <AdminCursantClient profile={cursantProfile as Profile} />

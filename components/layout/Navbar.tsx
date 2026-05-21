@@ -10,6 +10,7 @@ const CURSANT_NAV = [
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/chat',      label: 'Comunitate' },
   { href: '/mesaje',    label: 'Mesaje' },
+  { href: '/biblioteca', label: 'Bibliotecă' },
   { href: '/documente', label: 'Documente' },
   { href: '/istoric',   label: 'Istoric' },
   { href: '/resurse',   label: 'Resurse' },
@@ -17,12 +18,13 @@ const CURSANT_NAV = [
 ]
 
 const ADMIN_NAV = [
-  { href: '/admin',            label: 'Cursanți' },
-  { href: '/chat',             label: 'Comunitate' },
-  { href: '/mesaje',           label: 'Mesaje' },
-  { href: '/documente',        label: 'Documente' },
-  { href: '/admin/notificari', label: 'Notificări' },
-  { href: '/admin/rapoarte',   label: 'Rapoarte' },
+  { href: '/admin',              label: 'Cursanți' },
+  { href: '/chat',               label: 'Comunitate' },
+  { href: '/mesaje',             label: 'Mesaje' },
+  { href: '/biblioteca',         label: 'Bibliotecă' },
+  { href: '/documente',          label: 'Documente' },
+  { href: '/admin/notificari',   label: 'Notificări' },
+  { href: '/admin/rapoarte',     label: 'Rapoarte' },
 ]
 
 interface ToastItem {

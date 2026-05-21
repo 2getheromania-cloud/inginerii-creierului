@@ -43,6 +43,17 @@ export async function sendDailyReminder(email: string, name: string) {
   })
 }
 
+const SLIDER_LABELS_RO: Record<string, string> = {
+  energie:        'Energie',
+  somn:           'Calitate somn',
+  stres:          'Nivel stres',
+  stare_generala: 'Stare generală',
+  productivitate: 'Productivitate',
+  digestie:       'Digestie',
+  claritate:      'Claritate mentală',
+  dispozitie:     'Dispoziție emoțională',
+}
+
 export async function sendWeeklySummary(
   email: string,
   name: string,
@@ -51,7 +62,14 @@ export async function sendWeeklySummary(
   completedDays: number
 ) {
   const sliderRows = Object.entries(avgSliders)
-    .map(([k, v]) => `<tr><td style="padding:4px 8px">${k}</td><td style="padding:4px 8px;font-weight:600">${v.toFixed(1)}/10</td></tr>`)
+    .map(([k, v]) => {
+      const label = SLIDER_LABELS_RO[k] ?? k
+      const color = v >= 7 ? '#16a34a' : v >= 5 ? '#d97706' : '#dc2626'
+      return `<tr>
+        <td style="padding:6px 8px;color:#374151">${label}</td>
+        <td style="padding:6px 8px;font-weight:700;color:${color}">${v.toFixed(1)}/10</td>
+      </tr>`
+    })
     .join('')
 
   return client().emails.send({
