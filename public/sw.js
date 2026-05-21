@@ -1,7 +1,7 @@
 // Minimal service worker for PWA installability
 // Network-first strategy — no aggressive caching to avoid stale Next.js builds
 
-const CACHE = 'ic-v1'
+const CACHE = 'ic-v2'
 
 self.addEventListener('install', () => self.skipWaiting())
 
