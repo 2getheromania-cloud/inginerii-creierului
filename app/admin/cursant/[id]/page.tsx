@@ -151,7 +151,7 @@ export default async function AdminCursantPage({ params }: { params: { id: strin
         {/* ── Documente cursant ── */}
         <div className="card">
           <h3 className="font-semibold mb-4">Documente cursant</h3>
-          <DocumenteClient userId={cursantProfile.id} isAdmin={true} targetUserId={cursantProfile.id} />
+          <DocumenteClient userId={user.id} isAdmin={true} targetUserId={cursantProfile.id} />
         </div>
 
         {/* ── Resurse curente ── */}
