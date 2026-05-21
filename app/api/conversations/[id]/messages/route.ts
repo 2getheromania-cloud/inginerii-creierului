@@ -1,9 +1,34 @@
-import { createClient as supa } from '@supabase/supabase-js'
+import { createClient as supa, SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 function service() {
   return supa(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+}
+
+// PostgREST self-referential joins require a FK constraint on reply_to_id.
+// If that FK is missing the join returns null/{}. This manually fills it in.
+async function enrichWithReplies(msgs: Record<string, unknown>[], svc: SupabaseClient) {
+  const ids = Array.from(new Set(
+    msgs
+      .filter(m => m.reply_to_id && !(m.reply_to as Record<string, unknown> | null)?.id)
+      .map(m => m.reply_to_id as string)
+  ))
+  if (!ids.length) return msgs
+
+  const { data: originals } = await svc
+    .from('private_messages')
+    .select('id, content, sender_id')
+    .in('id', ids)
+
+  if (!originals?.length) return msgs
+
+  const byId = new Map(originals.map((r: Record<string, unknown>) => [r.id as string, r]))
+  return msgs.map(m =>
+    m.reply_to_id && !(m.reply_to as Record<string, unknown> | null)?.id
+      ? { ...m, reply_to: byId.get(m.reply_to_id as string) ?? null }
+      : m
+  )
 }
 
 async function getConvAndCheck(convId: string, userId: string) {
@@ -29,14 +54,16 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const checked = await getConvAndCheck(params.id, user.id)
   if (!checked) return NextResponse.json({ error: 'Not found or forbidden' }, { status: 403 })
 
-  const { data } = await service()
+  const svc = service()
+  const { data } = await svc
     .from('private_messages')
     .select('*, reactions:private_message_reactions(emoji, user_id), reply_to:private_messages!reply_to_id(id, content, sender_id)')
     .eq('conversation_id', params.id)
     .order('created_at', { ascending: true })
     .limit(200)
 
-  return NextResponse.json(data ?? [])
+  const enriched = await enrichWithReplies((data ?? []) as unknown as Record<string, unknown>[], svc)
+  return NextResponse.json(enriched)
 }
 
 // Mark all messages in this conversation as read (for the current user)

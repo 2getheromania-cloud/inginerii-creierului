@@ -1,4 +1,4 @@
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { createClient as createSupabaseClient, SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -13,6 +13,31 @@ function serviceClient() {
   return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
+}
+
+// PostgREST self-referential joins require a FK constraint on reply_to_id.
+// If that FK is missing the join returns null/{}. This manually fills it in.
+async function enrichWithReplies(msgs: Record<string, unknown>[], svc: SupabaseClient) {
+  const ids = Array.from(new Set(
+    msgs
+      .filter(m => m.reply_to_id && !(m.reply_to as Record<string, unknown> | null)?.id)
+      .map(m => m.reply_to_id as string)
+  ))
+  if (!ids.length) return msgs
+
+  const { data: originals } = await svc
+    .from('group_chat_messages')
+    .select('id, body, image_url, sender:profiles!sender_id(name, email)')
+    .in('id', ids)
+
+  if (!originals?.length) return msgs
+
+  const byId = new Map(originals.map((r: Record<string, unknown>) => [r.id as string, r]))
+  return msgs.map(m =>
+    m.reply_to_id && !(m.reply_to as Record<string, unknown> | null)?.id
+      ? { ...m, reply_to: byId.get(m.reply_to_id as string) ?? null }
+      : m
   )
 }
 
@@ -33,31 +58,31 @@ export async function GET(request: NextRequest) {
     .is('deleted_at', null)
 
   if (since) {
-    // Polling: messages strictly after 'since' timestamp, ascending
     const { data, error } = await q
       .gt('created_at', since)
       .order('created_at', { ascending: true })
       .limit(100)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json(data ?? [])
+    const enriched = await enrichWithReplies((data ?? []) as unknown as Record<string, unknown>[], service)
+    return NextResponse.json(enriched)
   }
 
   if (before) {
-    // Load older: 60 messages before timestamp, then reverse for display
     const { data, error } = await q
       .lt('created_at', before)
       .order('created_at', { ascending: false })
       .limit(60)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json((data ?? []).reverse())
+    const enriched = await enrichWithReplies((data ?? []) as unknown as Record<string, unknown>[], service)
+    return NextResponse.json(enriched.reverse())
   }
 
-  // Default: last 60 messages, reversed to ascending for display
   const { data, error } = await q
     .order('created_at', { ascending: false })
     .limit(60)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json((data ?? []).reverse())
+  const enriched = await enrichWithReplies((data ?? []) as unknown as Record<string, unknown>[], service)
+  return NextResponse.json(enriched.reverse())
 }
 
 export async function POST(request: NextRequest) {
@@ -75,7 +100,8 @@ export async function POST(request: NextRequest) {
   if (!body?.trim() && !image_url)
     return NextResponse.json({ error: 'Mesajul nu poate fi gol.' }, { status: 400 })
 
-  const { data, error } = await supabase
+  const service = serviceClient()
+  const { data, error } = await service
     .from('group_chat_messages')
     .insert({
       sender_id:   user.id,
@@ -88,5 +114,7 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+
+  const [enriched] = await enrichWithReplies([data as unknown as Record<string, unknown>], service)
+  return NextResponse.json(enriched)
 }
