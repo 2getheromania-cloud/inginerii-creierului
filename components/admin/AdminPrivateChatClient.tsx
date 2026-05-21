@@ -40,6 +40,7 @@ function MessageBubble({
   const time = new Date(msg.created_at).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })
   const reactionGroups = groupReactions(msg.reactions, currentUserId)
   const isOptimistic = msg.id.startsWith('tmp-')
+  const replyContent = msg.reply_to?.content || '(mesaj original indisponibil)'
 
   async function saveEdit() {
     const trimmed = draft.trim()
@@ -78,12 +79,33 @@ function MessageBubble({
             isOwn ? 'bg-brand-600 text-white rounded-br-sm' : 'bg-gray-100 text-gray-900 rounded-bl-sm'
           } ${isOptimistic ? 'opacity-70' : ''} ${isHighlighted ? 'ring-2 ring-brand-400' : ''}`}>
             {msg.reply_to && (
-              <button type="button" onClick={() => onScrollToMessage(msg.reply_to!.id)}
-                className={`block w-full text-left mb-2 rounded-lg px-2 py-1 border-l-4 ${
-                  isOwn ? 'border-brand-300 bg-brand-700/20' : 'border-gray-300 bg-gray-50'
-                } active:opacity-70 transition-opacity`}>
-                <p className={`text-xs truncate ${isOwn ? 'text-brand-200' : 'text-gray-500'}`}>
-                  {msg.reply_to.content ?? '(mesaj original indisponibil)'}
+              <button
+                type="button"
+                onClick={() => onScrollToMessage(msg.reply_to!.id)}
+                style={{
+                  display: 'block', width: '100%', textAlign: 'left',
+                  marginBottom: 6, borderRadius: 8, padding: '5px 8px',
+                  border: 'none', cursor: 'pointer', overflow: 'hidden',
+                  WebkitTapHighlightColor: 'transparent',
+                  ...(isOwn
+                    ? { background: 'rgba(0,0,0,0.15)', borderLeft: '3px solid rgba(255,255,255,0.35)' }
+                    : { background: 'rgba(0,0,0,0.04)', borderLeft: '3px solid #22c55e' }
+                  ),
+                }}
+              >
+                <p style={{
+                  fontSize: 11, fontWeight: 600, marginBottom: 2, lineHeight: 1.3,
+                  color: isOwn ? 'rgba(255,255,255,0.9)' : '#16a34a',
+                }}>
+                  Răspuns la
+                </p>
+                <p style={{
+                  fontSize: 11, lineHeight: 1.35, margin: 0,
+                  overflow: 'hidden', display: '-webkit-box',
+                  WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                  color: isOwn ? 'rgba(255,255,255,0.65)' : '#6b7280',
+                } as React.CSSProperties}>
+                  {replyContent}
                 </p>
               </button>
             )}
