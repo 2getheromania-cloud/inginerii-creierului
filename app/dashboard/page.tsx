@@ -10,7 +10,7 @@ import CommunityWinsCard from '@/components/dashboard/CommunityWinsCard'
 import BrowserNotifCard from '@/components/dashboard/BrowserNotifCard'
 import OnboardingCard from '@/components/dashboard/OnboardingCard'
 import { todayISO, calcStreak } from '@/lib/utils'
-import { getPhaseFromWeek, PHASE_COLORS, PROTOCOL_LABELS, PROTOCOL_LINKS } from '@/lib/program'
+import { getPhaseFromWeek, PHASE_COLORS } from '@/lib/program'
 import type { DailyReport, ProtocolFlags, AdminMessage } from '@/lib/types'
 
 export default async function DashboardPage() {
@@ -30,7 +30,7 @@ export default async function DashboardPage() {
   const today = todayISO()
   const phase = getPhaseFromWeek(profile.week)
   const flags = profile.flags as ProtocolFlags
-  const activeFlags = Object.entries(flags).filter(([, v]) => v).map(([k]) => k as keyof ProtocolFlags)
+  const activeProtocols = (profile.protocols ?? []) as string[]
 
   const sevenDaysAgo = new Date()
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6)
@@ -42,13 +42,17 @@ export default async function DashboardPage() {
     { data: messagesRaw },
     { data: groupStatsRaw },
     { data: allReports },
+    { data: protocolTypes },
   ] = await Promise.all([
     supabase.from('daily_reports').select('*').eq('user_id', user.id).eq('date', today).single(),
     supabase.from('daily_reports').select('date, sliders').eq('user_id', user.id).gte('date', sevenDaysAgoStr),
     supabase.from('admin_messages').select('*').eq('is_active', true).lte('published_at', new Date().toISOString()).order('published_at', { ascending: false }),
     supabase.rpc('get_group_stats_last7'),
     supabase.from('daily_reports').select('date').eq('user_id', user.id).order('date', { ascending: false }).limit(60),
+    supabase.from('protocol_types').select('name, drive_url').eq('is_active', true),
   ])
+
+  const ptMap = new Map((protocolTypes ?? []).map(p => [p.name, p.drive_url as string | null]))
 
   const appStartDate = profile.app_start_date ?? null
   const allowBackfill = profile.allow_backfill ?? false
@@ -106,21 +110,26 @@ export default async function DashboardPage() {
         />
 
         {/* Active protocols */}
-        {activeFlags.length > 0 && (
+        {activeProtocols.length > 0 && (
           <div className="card bg-amber-50 border-amber-100">
             <p className="text-sm font-semibold text-amber-800 mb-2">Protocoale personalizate active:</p>
             <div className="flex flex-wrap gap-2">
-              {activeFlags.map(flag => (
-                <a
-                  key={flag}
-                  href={PROTOCOL_LINKS[flag]}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="badge bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors"
-                >
-                  {PROTOCOL_LABELS[flag]} →
-                </a>
-              ))}
+              {activeProtocols.map(name => {
+                const url = ptMap.get(name)
+                return url ? (
+                  <a
+                    key={name}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="badge bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors"
+                  >
+                    {name} →
+                  </a>
+                ) : (
+                  <span key={name} className="badge bg-amber-100 text-amber-800">{name}</span>
+                )
+              })}
             </div>
           </div>
         )}
