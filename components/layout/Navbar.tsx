@@ -199,9 +199,7 @@ export default function Navbar({ profile }: { profile: Profile }) {
             href={isAdmin ? '/admin' : '/dashboard'}
             className="flex items-center gap-2 flex-shrink-0"
           >
-            <div className="w-7 h-7 bg-brand-600 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-              IC
-            </div>
+            <img src="/icon-192.png" alt="IC" className="w-7 h-7 rounded-lg object-cover flex-shrink-0" />
             <span className="font-semibold text-gray-900 hidden sm:inline text-sm">
               Inginerii Creierului
             </span>

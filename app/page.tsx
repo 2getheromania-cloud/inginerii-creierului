@@ -8,7 +8,7 @@ export default function HomePage() {
       {/* Header */}
       <header className="py-6 px-4 text-center">
         <div className="flex items-center justify-center gap-3 mb-2">
-          <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white font-bold text-lg">IC</div>
+          <img src="/icon-192.png" alt="Inginerii Creierului" className="w-10 h-10 rounded-xl object-cover" />
           <span className="text-xl font-bold text-gray-900">Inginerii Creierului</span>
         </div>
         <p className="text-sm text-brand-700 font-medium">Program de refacere a microbiomului intestinal</p>
