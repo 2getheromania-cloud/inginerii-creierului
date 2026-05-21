@@ -10,9 +10,12 @@ interface Props {
   isOwn: boolean
   isAdmin: boolean
   currentUserId: string
+  isHighlighted?: boolean
   onAdminAction: (id: string, action: 'pin' | 'announce' | 'delete') => void
   onReact: (id: string, emoji: string) => void
   onEdit: (id: string, newBody: string) => Promise<void>
+  onReply: (msg: ChatMessage) => void
+  onScrollToMessage: (id: string) => void
 }
 
 function groupReactions(reactions: ChatReaction[], currentUserId: string) {
@@ -25,7 +28,7 @@ function groupReactions(reactions: ChatReaction[], currentUserId: string) {
 }
 
 export default function ChatMessageBubble({
-  message, isOwn, isAdmin, currentUserId, onAdminAction, onReact, onEdit,
+  message, isOwn, isAdmin, currentUserId, isHighlighted, onAdminAction, onReact, onEdit, onReply, onScrollToMessage,
 }: Props) {
   const { sender, body, image_url, is_announcement, is_pinned, created_at, edited_at, reactions = [] } = message
   if (!sender) return null
@@ -121,13 +124,29 @@ export default function ChatMessageBubble({
             </div>
           </div>
         ) : (
-          <div className={`relative rounded-2xl px-3 py-2 ${
+          <div className={`relative rounded-2xl px-3 py-2 transition-colors ${
             isOwn
               ? 'bg-brand-600 text-white rounded-br-sm'
               : isAdminSender
                 ? 'bg-amber-50 text-gray-900 border border-amber-200 rounded-bl-sm'
                 : 'bg-white text-gray-900 shadow-sm rounded-bl-sm'
-          }`}>
+          } ${isHighlighted ? 'ring-2 ring-brand-400' : ''}`}>
+            {message.reply_to && (
+              <button
+                type="button"
+                onClick={() => onScrollToMessage(message.reply_to!.id)}
+                className={`block w-full text-left mb-2 rounded-lg px-2 py-1 border-l-4 ${
+                  isOwn ? 'border-brand-300 bg-brand-700/20' : 'border-gray-300 bg-gray-50'
+                } hover:opacity-80 transition-opacity`}
+              >
+                <p className={`text-xs font-semibold truncate ${isOwn ? 'text-brand-200' : 'text-gray-500'}`}>
+                  {message.reply_to.sender.name || message.reply_to.sender.email}
+                </p>
+                <p className={`text-xs truncate ${isOwn ? 'text-brand-200' : 'text-gray-500'}`}>
+                  {message.reply_to.body ?? '(imagine)'}
+                </p>
+              </button>
+            )}
             {is_pinned && (
               <span className={`text-xs block mb-1 ${isOwn ? 'text-brand-200' : 'text-gray-400'}`}>📌 fixat</span>
             )}
@@ -170,7 +189,7 @@ export default function ChatMessageBubble({
         )}
 
         {/* Action bar: react + edit + admin */}
-        <div className={`flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity relative ${isOwn ? 'flex-row-reverse' : ''}`}>
+        <div className={`flex items-center gap-1 opacity-70 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity relative ${isOwn ? 'flex-row-reverse' : ''}`}>
 
           {/* React picker trigger */}
           <div className="relative" ref={pickerRef}>
@@ -197,6 +216,15 @@ export default function ChatMessageBubble({
               </div>
             )}
           </div>
+
+          {/* Reply button */}
+          <button
+            onClick={() => onReply(message)}
+            className="text-xs text-gray-400 hover:text-gray-600 transition-colors px-1"
+            title="Răspunde"
+          >
+            ↩️
+          </button>
 
           {/* Edit button — own messages only */}
           {isOwn && body && !isEditing && (

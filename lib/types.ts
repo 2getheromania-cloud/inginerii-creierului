@@ -108,6 +108,13 @@ export interface ChatReaction {
   user_id: string
 }
 
+export interface ChatReplyPreview {
+  id: string
+  body: string | null
+  image_url: string | null
+  sender: { name: string | null; email: string }
+}
+
 export interface ChatMessage {
   id: string
   sender_id: string
@@ -120,8 +127,16 @@ export interface ChatMessage {
   deleted_at: string | null
   created_at: string
   edited_at?: string | null
+  reply_to_id?: string | null
+  reply_to?: ChatReplyPreview | null
   sender: ChatMessageSender
   reactions?: ChatReaction[]
+}
+
+export interface PrivateReplyPreview {
+  id: string
+  content: string
+  sender_id: string
 }
 
 export interface AdminMessage {
@@ -162,6 +177,8 @@ export interface PrivateMessage {
   created_at: string
   edited_at?: string | null
   reactions?: ChatReaction[]
+  reply_to_id?: string | null
+  reply_to?: PrivateReplyPreview | null
 }
 
 export type ProgramPhase =

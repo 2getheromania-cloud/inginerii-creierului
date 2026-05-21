@@ -31,7 +31,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
   const { data } = await service()
     .from('private_messages')
-    .select('*, reactions:private_message_reactions(emoji, user_id)')
+    .select('*, reactions:private_message_reactions(emoji, user_id), reply_to:private_messages!reply_to_id(id, content, sender_id)')
     .eq('conversation_id', params.id)
     .order('created_at', { ascending: true })
     .limit(200)
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const { data: { user } } = await authClient.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { content } = await req.json() as { content: string }
+  const { content, reply_to_id } = await req.json() as { content: string; reply_to_id?: string | null }
   if (!content?.trim()) return NextResponse.json({ error: 'Mesaj gol' }, { status: 400 })
 
   const { data: conv } = await service()
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const { data: msg, error } = await service()
     .from('private_messages')
-    .insert({ conversation_id: params.id, sender_id: user.id, content: content.trim() })
+    .insert({ conversation_id: params.id, sender_id: user.id, content: content.trim(), reply_to_id: reply_to_id || null })
     .select()
     .single()
 

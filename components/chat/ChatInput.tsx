@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import type { ChatReplyPreview } from '@/lib/types'
 
 const EMOJIS = ['😊', '❤️', '🙏', '🌿', '💪', '🔥', '👏']
 const MAX_PX = 1280
@@ -8,8 +9,10 @@ const QUALITY = 0.82
 
 interface Props {
   userId: string
-  onSend: (body: string | null, imageUrl: string | null, imagePath: string | null) => void
+  onSend: (body: string | null, imageUrl: string | null, imagePath: string | null, replyToId: string | null) => void
   sending: boolean
+  replyTo?: ChatReplyPreview | null
+  onCancelReply?: () => void
 }
 
 async function compressImage(file: File): Promise<Blob> {
@@ -34,7 +37,7 @@ async function compressImage(file: File): Promise<Blob> {
   })
 }
 
-export default function ChatInput({ userId, onSend, sending }: Props) {
+export default function ChatInput({ userId, onSend, sending, replyTo, onCancelReply }: Props) {
   const [text, setText] = useState('')
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageFile, setImageFile] = useState<File | null>(null)
@@ -101,7 +104,7 @@ export default function ChatInput({ userId, onSend, sending }: Props) {
       setUploading(false)
     }
 
-    onSend(trimmed || null, imageUrl, imagePath)
+    onSend(trimmed || null, imageUrl, imagePath, replyTo?.id ?? null)
     setText('')
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto'
@@ -114,6 +117,17 @@ export default function ChatInput({ userId, onSend, sending }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="border-t border-gray-100 bg-white px-4 pt-2 pb-3 space-y-2 flex-shrink-0">
+      {/* Reply preview */}
+      {replyTo && (
+        <div className="flex items-start gap-2 bg-brand-50 border-l-4 border-brand-400 rounded-lg px-3 py-1.5">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-brand-700 truncate">{replyTo.sender.name || replyTo.sender.email}</p>
+            <p className="text-xs text-gray-500 truncate">{replyTo.body ?? '(imagine)'}</p>
+          </div>
+          <button type="button" onClick={onCancelReply} className="text-gray-400 hover:text-gray-600 text-lg leading-none flex-shrink-0">×</button>
+        </div>
+      )}
+
       {/* Emoji bar */}
       <div className="flex gap-2.5">
         {EMOJIS.map(emoji => (

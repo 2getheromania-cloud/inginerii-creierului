@@ -2,7 +2,12 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
-const SELECT = '*, sender:profiles!sender_id(id, name, email, role), reactions:group_chat_reactions(emoji, user_id)'
+const SELECT = [
+  '*',
+  'sender:profiles!sender_id(id, name, email, role)',
+  'reactions:group_chat_reactions(emoji, user_id)',
+  'reply_to:group_chat_messages!reply_to_id(id, body, image_url, sender:profiles!sender_id(name, email))',
+].join(', ')
 
 function serviceClient() {
   return createSupabaseClient(
@@ -60,10 +65,11 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { body, image_url, image_path } = await request.json() as {
+  const { body, image_url, image_path, reply_to_id } = await request.json() as {
     body?: string | null
     image_url?: string | null
     image_path?: string | null
+    reply_to_id?: string | null
   }
 
   if (!body?.trim() && !image_url)
@@ -72,10 +78,11 @@ export async function POST(request: NextRequest) {
   const { data, error } = await supabase
     .from('group_chat_messages')
     .insert({
-      sender_id:  user.id,
-      body:       body?.trim() || null,
-      image_url:  image_url  || null,
-      image_path: image_path || null,
+      sender_id:   user.id,
+      body:        body?.trim() || null,
+      image_url:   image_url   || null,
+      image_path:  image_path  || null,
+      reply_to_id: reply_to_id || null,
     })
     .select(SELECT)
     .single()

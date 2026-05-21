@@ -1,6 +1,6 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
-import type { ChatMessage } from '@/lib/types'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import type { ChatMessage, ChatReplyPreview } from '@/lib/types'
 import ChatMessageBubble from './ChatMessage'
 import ChatInput from './ChatInput'
 
@@ -27,11 +27,32 @@ export default function ChatClient({ initialMessages, userId, userRole }: Props)
   const [actionError, setActionError] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
+  const [replyTo, setReplyTo] = useState<ChatReplyPreview | null>(null)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchIdx, setSearchIdx] = useState(0)
+
   const scrollRef = useRef<HTMLDivElement>(null)
   const latestTsRef = useRef<string>(
     initialMessages.at(-1)?.created_at ?? new Date(0).toISOString()
   )
   const isAtBottomRef = useRef(true)
+  const messageRefs = useRef<Map<string, HTMLElement>>(new Map())
+
+  const searchResultIds = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return []
+    return messages.filter(m => m.body?.toLowerCase().includes(q)).map(m => m.id)
+  }, [messages, searchQuery])
+
+  function scrollToMessage(id: string) {
+    const el = messageRefs.current.get(id)
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
+  useEffect(() => {
+    if (searchResultIds.length > 0) scrollToMessage(searchResultIds[searchIdx] ?? searchResultIds[0])
+  }, [searchResultIds, searchIdx])
 
   function scrollToBottom(force = false) {
     const el = scrollRef.current
@@ -96,14 +117,25 @@ export default function ChatClient({ initialMessages, userId, userRole }: Props)
     }
   }
 
-  async function handleSend(body: string | null, imageUrl: string | null, imagePath: string | null) {
+  function handleReply(msg: ChatMessage) {
+    setReplyTo({
+      id: msg.id,
+      body: msg.body,
+      image_url: msg.image_url,
+      sender: { name: msg.sender.name, email: msg.sender.email },
+    })
+  }
+
+  async function handleSend(body: string | null, imageUrl: string | null, imagePath: string | null, replyToId: string | null) {
     setSending(true)
     setSendError(null)
+    const capturedReplyToId = replyToId
+    setReplyTo(null)
     try {
       const res = await fetch('/api/chat/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ body, image_url: imageUrl, image_path: imagePath }),
+        body: JSON.stringify({ body, image_url: imageUrl, image_path: imagePath, reply_to_id: capturedReplyToId }),
       })
       const data = await res.json()
       if (!res.ok) { setSendError(data.error ?? 'Eroare la trimitere'); return }
@@ -195,6 +227,42 @@ export default function ChatClient({ initialMessages, userId, userRole }: Props)
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Search bar */}
+      {searchOpen && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-white border-b border-gray-100 flex-shrink-0">
+          <input
+            autoFocus
+            type="text"
+            value={searchQuery}
+            onChange={e => { setSearchQuery(e.target.value); setSearchIdx(0) }}
+            placeholder="Caută în mesaje..."
+            className="flex-1 text-sm rounded-xl border border-gray-200 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400"
+          />
+          {searchResultIds.length > 0 && (
+            <span className="text-xs text-gray-500 whitespace-nowrap">
+              {searchIdx + 1}/{searchResultIds.length}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => setSearchIdx(i => Math.max(0, i - 1))}
+            disabled={searchResultIds.length === 0 || searchIdx === 0}
+            className="text-gray-500 disabled:opacity-30 text-sm px-1"
+          >▲</button>
+          <button
+            type="button"
+            onClick={() => setSearchIdx(i => Math.min(searchResultIds.length - 1, i + 1))}
+            disabled={searchResultIds.length === 0 || searchIdx === searchResultIds.length - 1}
+            className="text-gray-500 disabled:opacity-30 text-sm px-1"
+          >▼</button>
+          <button
+            type="button"
+            onClick={() => { setSearchOpen(false); setSearchQuery(''); setSearchIdx(0) }}
+            className="text-gray-400 hover:text-gray-600 text-lg leading-none"
+          >×</button>
+        </div>
+      )}
+
       {/* Pinned messages banner */}
       {pinnedMessages.length > 0 && (
         <div className="bg-brand-50 border-b border-brand-100 px-4 py-2 flex-shrink-0">
@@ -237,16 +305,23 @@ export default function ChatClient({ initialMessages, userId, userRole }: Props)
         )}
 
         {messages.map(msg => (
-          <ChatMessageBubble
+          <div
             key={msg.id}
-            message={msg}
-            isOwn={msg.sender_id === userId}
-            isAdmin={isAdmin}
-            currentUserId={userId}
-            onAdminAction={handleAdminAction}
-            onReact={handleReact}
-            onEdit={handleEdit}
-          />
+            ref={el => { if (el) messageRefs.current.set(msg.id, el); else messageRefs.current.delete(msg.id) }}
+          >
+            <ChatMessageBubble
+              message={msg}
+              isOwn={msg.sender_id === userId}
+              isAdmin={isAdmin}
+              currentUserId={userId}
+              isHighlighted={searchResultIds.length > 0 && searchResultIds[searchIdx] === msg.id}
+              onAdminAction={handleAdminAction}
+              onReact={handleReact}
+              onEdit={handleEdit}
+              onReply={handleReply}
+              onScrollToMessage={scrollToMessage}
+            />
+          </div>
         ))}
       </div>
 
@@ -290,7 +365,17 @@ export default function ChatClient({ initialMessages, userId, userRole }: Props)
         </div>
       )}
 
-      <ChatInput userId={userId} onSend={handleSend} sending={sending} />
+      <div className="relative flex-shrink-0">
+        <button
+          type="button"
+          onClick={() => setSearchOpen(o => !o)}
+          className="absolute right-4 -top-8 z-10 text-gray-400 hover:text-gray-600 bg-white rounded-full p-1 shadow-sm border border-gray-100 text-sm"
+          title="Caută în mesaje"
+        >
+          🔍
+        </button>
+        <ChatInput userId={userId} onSend={handleSend} sending={sending} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} />
+      </div>
     </div>
   )
 }

@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { PrivateMessage, ChatReaction } from '@/lib/types'
 
@@ -21,14 +21,17 @@ function groupReactions(reactions: ChatReaction[] = [], currentUserId: string) {
 }
 
 function MessageBubble({
-  msg, isOwn, userId,
-  onReact, onEdit,
+  msg, isOwn, userId, isHighlighted,
+  onReact, onEdit, onReply, onScrollToMessage,
 }: {
   msg: PrivateMessage
   isOwn: boolean
   userId: string
+  isHighlighted?: boolean
   onReact: (id: string, emoji: string) => void
   onEdit: (id: string, content: string) => Promise<void>
+  onReply: (msg: PrivateMessage) => void
+  onScrollToMessage: (id: string) => void
 }) {
   const [showPicker, setShowPicker] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -84,9 +87,22 @@ function MessageBubble({
             </div>
           </div>
         ) : (
-          <div className={`max-w-full rounded-2xl px-4 py-2.5 ${
+          <div className={`max-w-full rounded-2xl px-4 py-2.5 transition-colors ${
             isOwn ? 'bg-brand-600 text-white rounded-br-sm' : 'bg-white shadow-sm text-gray-900 rounded-bl-sm'
-          } ${isOptimistic ? 'opacity-70' : ''}`}>
+          } ${isOptimistic ? 'opacity-70' : ''} ${isHighlighted ? 'ring-2 ring-brand-400' : ''}`}>
+            {msg.reply_to && (
+              <button
+                type="button"
+                onClick={() => onScrollToMessage(msg.reply_to!.id)}
+                className={`block w-full text-left mb-2 rounded-lg px-2 py-1 border-l-4 ${
+                  isOwn ? 'border-brand-300 bg-brand-700/20' : 'border-gray-300 bg-gray-50'
+                } hover:opacity-80 transition-opacity`}
+              >
+                <p className={`text-xs truncate ${isOwn ? 'text-brand-200' : 'text-gray-500'}`}>
+                  {msg.reply_to.content}
+                </p>
+              </button>
+            )}
             <p className="text-[15px] md:text-sm whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
             <p className={`text-[11px] mt-1 text-right ${isOwn ? 'text-brand-200' : 'text-gray-400'}`} suppressHydrationWarning>
               {time}{msg.edited_at ? ' · editat' : ''}
@@ -113,7 +129,7 @@ function MessageBubble({
 
         {/* Actions */}
         {!isOptimistic && (
-          <div className={`flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity relative ${isOwn ? 'flex-row-reverse' : ''}`}>
+          <div className={`flex items-center gap-1 opacity-70 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity relative ${isOwn ? 'flex-row-reverse' : ''}`}>
             <div className="relative" ref={pickerRef}>
               <button onClick={() => setShowPicker(p => !p)} className="text-sm text-gray-400 hover:text-gray-600 px-1" title="Reacționează">😊</button>
               {showPicker && (
@@ -124,6 +140,7 @@ function MessageBubble({
                 </div>
               )}
             </div>
+            <button onClick={() => onReply(msg)} className="text-xs text-gray-400 hover:text-gray-600 px-1" title="Răspunde">↩️</button>
             {isOwn && !isEditing && (
               <button onClick={() => { setIsEditing(true); setDraft(msg.content) }} className="text-xs text-gray-400 hover:text-gray-600 px-1" title="Editează">✏️</button>
             )}
@@ -139,8 +156,29 @@ export default function MesajeClient({ conversationId, userId }: Props) {
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [replyTo, setReplyTo] = useState<PrivateMessage | null>(null)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchIdx, setSearchIdx] = useState(0)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const messageRefs = useRef<Map<string, HTMLElement>>(new Map())
   const supabase = createClient()
+
+  const searchResultIds = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return []
+    return messages.filter(m => m.content.toLowerCase().includes(q)).map(m => m.id)
+  }, [messages, searchQuery])
+
+  function scrollToMessage(id: string) {
+    const el = messageRefs.current.get(id)
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
+  useEffect(() => {
+    if (searchResultIds.length > 0) scrollToMessage(searchResultIds[searchIdx] ?? searchResultIds[0])
+  }, [searchResultIds, searchIdx])
 
   function scrollToBottom() {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
@@ -209,10 +247,12 @@ export default function MesajeClient({ conversationId, userId }: Props) {
     if (!trimmed || sending) return
     setSending(true)
     setError(null)
+    const capturedReplyToId = replyTo?.id ?? null
+    setReplyTo(null)
     const res = await fetch(`/api/conversations/${conversationId}/messages`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: trimmed }),
+      body: JSON.stringify({ content: trimmed, reply_to_id: capturedReplyToId }),
     })
     setSending(false)
     if (!res.ok) {
@@ -221,32 +261,79 @@ export default function MesajeClient({ conversationId, userId }: Props) {
       return
     }
     setText('')
+    if (textareaRef.current) textareaRef.current.style.height = 'auto'
   }
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
+      {/* Search bar */}
+      {searchOpen && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-white border-b border-gray-100 flex-shrink-0">
+          <input
+            autoFocus
+            type="text"
+            value={searchQuery}
+            onChange={e => { setSearchQuery(e.target.value); setSearchIdx(0) }}
+            placeholder="Caută în mesaje..."
+            className="flex-1 text-sm rounded-xl border border-gray-200 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400"
+          />
+          {searchResultIds.length > 0 && (
+            <span className="text-xs text-gray-500 whitespace-nowrap">{searchIdx + 1}/{searchResultIds.length}</span>
+          )}
+          <button type="button" onClick={() => setSearchIdx(i => Math.max(0, i - 1))} disabled={searchResultIds.length === 0 || searchIdx === 0} className="text-gray-500 disabled:opacity-30 text-sm px-1">▲</button>
+          <button type="button" onClick={() => setSearchIdx(i => Math.min(searchResultIds.length - 1, i + 1))} disabled={searchResultIds.length === 0 || searchIdx === searchResultIds.length - 1} className="text-gray-500 disabled:opacity-30 text-sm px-1">▼</button>
+          <button type="button" onClick={() => { setSearchOpen(false); setSearchQuery(''); setSearchIdx(0) }} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+        </div>
+      )}
+
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
         {messages.length === 0 && (
           <p className="text-center text-gray-400 text-sm py-12">Niciun mesaj încă. Scrie-ne orice întrebare!</p>
         )}
         {messages.map(msg => (
-          <MessageBubble
-            key={msg.id}
-            msg={msg}
-            isOwn={msg.sender_id === userId}
-            userId={userId}
-            onReact={handleReact}
-            onEdit={handleEdit}
-          />
+          <div key={msg.id} ref={el => { if (el) messageRefs.current.set(msg.id, el); else messageRefs.current.delete(msg.id) }}>
+            <MessageBubble
+              msg={msg}
+              isOwn={msg.sender_id === userId}
+              userId={userId}
+              isHighlighted={searchResultIds.length > 0 && searchResultIds[searchIdx] === msg.id}
+              onReact={handleReact}
+              onEdit={handleEdit}
+              onReply={setReplyTo}
+              onScrollToMessage={scrollToMessage}
+            />
+          </div>
         ))}
       </div>
+
       {error && (
         <div className="px-4 py-2 text-sm text-red-600 bg-red-50 border-t border-red-100">
           {error}<button onClick={() => setError(null)} className="ml-2 underline text-xs">ok</button>
         </div>
       )}
+
+      {/* Reply preview */}
+      {replyTo && (
+        <div className="flex items-start gap-2 bg-brand-50 border-l-4 border-brand-400 mx-4 rounded-lg px-3 py-1.5 mb-1">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-brand-700">Răspuns la</p>
+            <p className="text-xs text-gray-500 truncate">{replyTo.content}</p>
+          </div>
+          <button onClick={() => setReplyTo(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none flex-shrink-0">×</button>
+        </div>
+      )}
+
       <form onSubmit={handleSend} className="border-t border-gray-100 bg-white px-4 py-3 flex gap-2 items-end flex-shrink-0">
+        <button
+          type="button"
+          onClick={() => setSearchOpen(o => !o)}
+          className="text-gray-400 hover:text-gray-600 text-sm flex-shrink-0 pb-1"
+          title="Caută în mesaje"
+        >
+          🔍
+        </button>
         <textarea
+          ref={textareaRef}
           value={text}
           onChange={e => { setText(e.target.value); const el = e.target; el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 96) + 'px' }}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(e as unknown as React.FormEvent) } }}
