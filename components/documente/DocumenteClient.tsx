@@ -12,6 +12,7 @@ interface Preview {
   url: string
   name: string
   type: 'pdf' | 'image' | 'other'
+  previewError?: boolean
 }
 
 const fmtSize = (b: number) =>
@@ -24,12 +25,35 @@ function previewType(name: string): Preview['type'] {
   return 'other'
 }
 
-function PreviewModal({ preview, onClose }: { preview: Preview; onClose: () => void }) {
+function PreviewModal({ preview, onClose, onSetError }: { preview: Preview; onClose: () => void; onSetError: (v: Preview) => void }) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [onClose])
+
+  const fallback = (
+    <div className="text-center text-white/80 space-y-4 max-w-sm">
+      <p className="text-base">Nu am putut deschide previzualizarea.</p>
+      <div className="flex flex-col gap-2 items-center">
+        <a
+          href={preview.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block bg-white text-gray-900 text-sm font-medium px-5 py-2.5 rounded-xl"
+        >
+          Deschide în tab nou →
+        </a>
+        <a
+          href={preview.url}
+          download
+          className="text-xs text-white/60 hover:text-white underline"
+        >
+          Descarcă documentul
+        </a>
+      </div>
+    </div>
+  )
 
   return (
     <div
@@ -69,31 +93,34 @@ function PreviewModal({ preview, onClose }: { preview: Preview; onClose: () => v
         className="flex-1 overflow-auto flex items-center justify-center p-4"
         onClick={e => e.stopPropagation()}
       >
-        {preview.type === 'pdf' && (
+        {preview.previewError ? (
+          fallback
+        ) : preview.type === 'pdf' ? (
           <iframe
             src={preview.url}
             className="w-full h-full rounded-lg"
             style={{ minHeight: '70vh' }}
             title={preview.name}
+            onError={() => onSetError({ ...preview, previewError: true })}
           />
-        )}
-        {preview.type === 'image' && (
+        ) : preview.type === 'image' ? (
           <img
             src={preview.url}
             alt={preview.name}
             className="max-w-full max-h-[80vh] rounded-lg object-contain"
+            onError={() => onSetError({ ...preview, previewError: true })}
           />
-        )}
-        {preview.type === 'other' && (
-          <div className="text-center text-white/70 space-y-3">
-            <p className="text-lg">Previzualizare indisponibilă pentru acest tip de fișier.</p>
+        ) : (
+          // DOCX and other non-previewable types
+          <div className="text-center text-white/80 space-y-4 max-w-sm">
+            <p className="text-base">Previzualizare indisponibilă pentru fișiere <strong className="text-white">.{preview.name.split('.').pop()?.toUpperCase()}</strong>.</p>
             <a
               href={preview.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block bg-white text-gray-900 text-sm font-medium px-4 py-2 rounded-lg"
+              className="inline-block bg-white text-gray-900 text-sm font-medium px-5 py-2.5 rounded-xl"
             >
-              Descarcă fișierul
+              Descarcă pentru vizualizare →
             </a>
           </div>
         )}
@@ -128,12 +155,12 @@ export default function DocumenteClient({ userId, isAdmin, targetUserId }: Props
       const res = await fetch(`/api/documents/${doc.id}`)
       const data = await res.json()
       if (!res.ok || !data.url) {
-        setError(data.error ?? 'Nu s-a putut genera previzualizarea.')
+        setError('Nu am putut deschide previzualizarea. Poți descărca documentul.')
         return
       }
       setPreview({ url: data.url, name: doc.name, type: previewType(doc.name) })
     } catch {
-      setError('Eroare la previzualizare.')
+      setError('Nu am putut deschide previzualizarea. Poți descărca documentul.')
     } finally {
       setLoadingPreviewId(null)
     }
@@ -218,7 +245,7 @@ export default function DocumenteClient({ userId, isAdmin, targetUserId }: Props
 
   return (
     <>
-      {preview && <PreviewModal preview={preview} onClose={() => setPreview(null)} />}
+      {preview && <PreviewModal preview={preview} onClose={() => setPreview(null)} onSetError={setPreview} />}
 
       <div className="space-y-4">
         {error && (

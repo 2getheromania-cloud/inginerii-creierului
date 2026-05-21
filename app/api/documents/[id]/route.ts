@@ -9,7 +9,8 @@ function service() {
 async function getDocAndCheck(docId: string, userId: string, isAdmin: boolean) {
   const { data: doc } = await service().from('documents').select('*').eq('id', docId).single()
   if (!doc) return null
-  if (!isAdmin && doc.user_id !== userId) return null
+  // Admins see all; cursanți see their own docs and global docs
+  if (!isAdmin && doc.user_id !== userId && !doc.is_global) return null
   return doc
 }
 
