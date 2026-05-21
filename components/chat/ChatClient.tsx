@@ -227,8 +227,8 @@ export default function ChatClient({ initialMessages, userId, userRole }: Props)
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Search bar */}
-      {searchOpen && (
+      {/* Search toolbar — always rendered, toggles between icon and full bar */}
+      {searchOpen ? (
         <div className="flex items-center gap-2 px-3 py-2 bg-white border-b border-gray-100 flex-shrink-0">
           <input
             autoFocus
@@ -239,27 +239,22 @@ export default function ChatClient({ initialMessages, userId, userRole }: Props)
             className="flex-1 text-sm rounded-xl border border-gray-200 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400"
           />
           {searchResultIds.length > 0 && (
-            <span className="text-xs text-gray-500 whitespace-nowrap">
-              {searchIdx + 1}/{searchResultIds.length}
-            </span>
+            <span className="text-xs text-gray-500 whitespace-nowrap">{searchIdx + 1}/{searchResultIds.length}</span>
           )}
-          <button
-            type="button"
-            onClick={() => setSearchIdx(i => Math.max(0, i - 1))}
+          <button type="button" onClick={() => setSearchIdx(i => Math.max(0, i - 1))}
             disabled={searchResultIds.length === 0 || searchIdx === 0}
-            className="text-gray-500 disabled:opacity-30 text-sm px-1"
-          >▲</button>
-          <button
-            type="button"
-            onClick={() => setSearchIdx(i => Math.min(searchResultIds.length - 1, i + 1))}
+            className="w-8 h-8 flex items-center justify-center text-gray-500 disabled:opacity-30 rounded-full hover:bg-gray-100">▲</button>
+          <button type="button" onClick={() => setSearchIdx(i => Math.min(searchResultIds.length - 1, i + 1))}
             disabled={searchResultIds.length === 0 || searchIdx === searchResultIds.length - 1}
-            className="text-gray-500 disabled:opacity-30 text-sm px-1"
-          >▼</button>
-          <button
-            type="button"
-            onClick={() => { setSearchOpen(false); setSearchQuery(''); setSearchIdx(0) }}
-            className="text-gray-400 hover:text-gray-600 text-lg leading-none"
-          >×</button>
+            className="w-8 h-8 flex items-center justify-center text-gray-500 disabled:opacity-30 rounded-full hover:bg-gray-100">▼</button>
+          <button type="button" onClick={() => { setSearchOpen(false); setSearchQuery(''); setSearchIdx(0) }}
+            className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 text-lg">×</button>
+        </div>
+      ) : (
+        <div className="flex items-center justify-end px-3 py-1 flex-shrink-0">
+          <button type="button" onClick={() => setSearchOpen(true)}
+            className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-50 active:bg-gray-100 transition-colors"
+            title="Caută în mesaje">🔍</button>
         </div>
       )}
 
@@ -365,17 +360,7 @@ export default function ChatClient({ initialMessages, userId, userRole }: Props)
         </div>
       )}
 
-      <div className="relative flex-shrink-0">
-        <button
-          type="button"
-          onClick={() => setSearchOpen(o => !o)}
-          className="absolute right-4 -top-8 z-10 text-gray-400 hover:text-gray-600 bg-white rounded-full p-1 shadow-sm border border-gray-100 text-sm"
-          title="Caută în mesaje"
-        >
-          🔍
-        </button>
-        <ChatInput userId={userId} onSend={handleSend} sending={sending} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} />
-      </div>
+      <ChatInput userId={userId} onSend={handleSend} sending={sending} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} />
     </div>
   )
 }
