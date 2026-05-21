@@ -16,10 +16,11 @@ const CURSANT_NAV = [
 ]
 
 const ADMIN_NAV = [
-  { href: '/admin',               label: 'Cursanți' },
-  { href: '/chat',                label: 'Comunitate' },
-  { href: '/admin/notificari',    label: 'Notificări' },
-  { href: '/admin/rapoarte',      label: 'Rapoarte' },
+  { href: '/admin',            label: 'Cursanți' },
+  { href: '/chat',             label: 'Comunitate' },
+  { href: '/mesaje',           label: 'Mesaje' },
+  { href: '/admin/notificari', label: 'Notificări' },
+  { href: '/admin/rapoarte',   label: 'Rapoarte' },
 ]
 
 export default function Navbar({ profile }: { profile: Profile }) {
