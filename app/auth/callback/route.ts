@@ -31,6 +31,8 @@ export async function GET(request: NextRequest) {
           )
         },
       },
+      // Ensure session cookies are persistent (survive browser restarts)
+      cookieOptions: { maxAge: 60 * 60 * 24 * 30 },
     }
   )
 

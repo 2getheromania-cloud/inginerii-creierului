@@ -23,6 +23,9 @@ export async function middleware(request: NextRequest) {
           )
         },
       },
+      // Every token refresh re-stamps cookies with a 30-day maxAge so they
+      // survive browser restarts on mobile (Safari/Chrome) and desktop.
+      cookieOptions: { maxAge: 60 * 60 * 24 * 30 },
     }
   )
 
@@ -34,6 +37,8 @@ export async function middleware(request: NextRequest) {
         sameSite: c.sameSite as 'lax' | 'strict' | 'none' | undefined,
         httpOnly: c.httpOnly,
         secure: c.secure,
+        maxAge: c.maxAge,
+        expires: c.expires,
       })
     )
     return res

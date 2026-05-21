@@ -7,11 +7,10 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookieOptions: {
-        // iOS Safari kills session cookies when the tab is suspended between
-        // requesting a magic link and clicking it. Persistent cookies survive.
-        // 7 days = typical Supabase session duration; the PKCE code_verifier
-        // only needs to survive the ~1h magic link window, but 7d is harmless.
-        maxAge: 60 * 60 * 24 * 7,
+        // Persistent cookies survive browser restarts on iOS Safari and Android.
+        // 30 days gives users a smooth "stay logged in" experience without
+        // requiring a new magic link on every device restart.
+        maxAge: 60 * 60 * 24 * 30,
       },
     }
   )

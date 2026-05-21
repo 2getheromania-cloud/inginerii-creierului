@@ -15,11 +15,16 @@ function cookieMethods(): CookieMethodsServer {
   }
 }
 
+const SESSION_MAX_AGE = 60 * 60 * 24 * 30 // 30 days
+
 export function createClient() {
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: cookieMethods() }
+    {
+      cookies: cookieMethods(),
+      cookieOptions: { maxAge: SESSION_MAX_AGE },
+    }
   )
 }
 
