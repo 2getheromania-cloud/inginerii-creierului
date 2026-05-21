@@ -31,7 +31,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
   const { data } = await service()
     .from('private_messages')
-    .select('*')
+    .select('*, reactions:private_message_reactions(emoji, user_id)')
     .eq('conversation_id', params.id)
     .order('created_at', { ascending: true })
     .limit(200)

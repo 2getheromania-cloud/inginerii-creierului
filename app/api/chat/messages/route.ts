@@ -2,7 +2,7 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
-const SELECT = '*, sender:profiles!sender_id(id, name, email, role)'
+const SELECT = '*, sender:profiles!sender_id(id, name, email, role), reactions:group_chat_reactions(emoji, user_id)'
 
 function serviceClient() {
   return createSupabaseClient(

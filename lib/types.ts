@@ -103,6 +103,11 @@ export interface ChatMessageSender {
   role: 'cursant' | 'admin'
 }
 
+export interface ChatReaction {
+  emoji: string
+  user_id: string
+}
+
 export interface ChatMessage {
   id: string
   sender_id: string
@@ -114,7 +119,9 @@ export interface ChatMessage {
   is_announcement: boolean
   deleted_at: string | null
   created_at: string
+  edited_at?: string | null
   sender: ChatMessageSender
+  reactions?: ChatReaction[]
 }
 
 export interface AdminMessage {
@@ -153,6 +160,8 @@ export interface PrivateMessage {
   content: string
   read: boolean
   created_at: string
+  edited_at?: string | null
+  reactions?: ChatReaction[]
 }
 
 export type ProgramPhase =

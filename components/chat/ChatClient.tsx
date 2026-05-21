@@ -120,6 +120,39 @@ export default function ChatClient({ initialMessages, userId, userRole }: Props)
     }
   }
 
+  async function handleReact(id: string, emoji: string) {
+    // Optimistic toggle
+    setMessages(prev => prev.map(m => {
+      if (m.id !== id) return m
+      const reactions = m.reactions ?? []
+      const idx = reactions.findIndex(r => r.emoji === emoji && r.user_id === userId)
+      return {
+        ...m,
+        reactions: idx >= 0
+          ? reactions.filter((_, i) => i !== idx)
+          : [...reactions, { emoji, user_id: userId }],
+      }
+    }))
+    fetch('/api/chat/reactions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message_id: id, emoji }),
+    }).catch(() => {})
+  }
+
+  async function handleEdit(id: string, newBody: string) {
+    const res = await fetch(`/api/chat/messages/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body: newBody }),
+    })
+    if (res.ok) {
+      setMessages(prev => prev.map(m =>
+        m.id === id ? { ...m, body: newBody, edited_at: new Date().toISOString() } : m
+      ))
+    }
+  }
+
   async function handleAdminAction(id: string, action: 'pin' | 'announce' | 'delete') {
     if (action === 'delete') {
       setConfirmDeleteId(id)
@@ -209,7 +242,10 @@ export default function ChatClient({ initialMessages, userId, userRole }: Props)
             message={msg}
             isOwn={msg.sender_id === userId}
             isAdmin={isAdmin}
+            currentUserId={userId}
             onAdminAction={handleAdminAction}
+            onReact={handleReact}
+            onEdit={handleEdit}
           />
         ))}
       </div>

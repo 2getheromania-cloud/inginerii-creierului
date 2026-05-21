@@ -9,29 +9,45 @@ function serviceClient() {
   )
 }
 
-async function requireAdmin() {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'admin') return null
-  return user
-}
-
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const user = await requireAdmin()
-  if (!user) return NextResponse.json({ error: 'Acces interzis' }, { status: 403 })
+  const authClient = createClient()
+  const { data: { user } } = await authClient.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json() as Record<string, unknown>
   const service = serviceClient()
 
+  const hasAdminFields = 'is_pinned' in body || 'is_announcement' in body || 'message_type' in body
+
+  // Admin fields require admin role
+  if (hasAdminFields) {
+    const { data: profile } = await service.from('profiles').select('role').eq('id', user.id).single()
+    if (profile?.role !== 'admin') return NextResponse.json({ error: 'Acces interzis' }, { status: 403 })
+  }
+
   const update: Record<string, unknown> = {}
+
+  // Admin-only fields
   if ('is_pinned'       in body) update.is_pinned       = body.is_pinned
   if ('is_announcement' in body) update.is_announcement = body.is_announcement
   if ('message_type'    in body) update.message_type    = body.message_type
+
+  // Own-message edit
+  if ('body' in body) {
+    const { data: msg } = await service
+      .from('group_chat_messages')
+      .select('sender_id')
+      .eq('id', params.id)
+      .single()
+    if (!msg || msg.sender_id !== user.id) {
+      return NextResponse.json({ error: 'Poți edita doar mesajele tale.' }, { status: 403 })
+    }
+    update.body      = (body.body as string)?.trim() || null
+    update.edited_at = new Date().toISOString()
+  }
 
   if (Object.keys(update).length === 0)
     return NextResponse.json({ error: 'Niciun câmp de actualizat' }, { status: 400 })
@@ -49,10 +65,13 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const user = await requireAdmin()
-  if (!user) return NextResponse.json({ error: 'Acces interzis' }, { status: 403 })
+  const authClient = createClient()
+  const { data: { user } } = await authClient.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const service = serviceClient()
+  const { data: profile } = await service.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin') return NextResponse.json({ error: 'Acces interzis' }, { status: 403 })
 
   const { data, error } = await service
     .from('group_chat_messages')
