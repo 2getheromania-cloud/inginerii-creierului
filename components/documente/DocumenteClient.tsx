@@ -289,23 +289,27 @@ export default function DocumenteClient({ userId, isAdmin, targetUserId }: Props
         ) : (
           <div className="space-y-2">
             {documents.map(doc => (
-              <div key={doc.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-gray-800 truncate">{doc.name}</p>
-                    {doc.is_global && (
-                      <span className="flex-shrink-0 text-[10px] font-semibold bg-brand-100 text-brand-700 px-1.5 py-0.5 rounded-full">
-                        Global
-                      </span>
-                    )}
+              <div key={doc.id} className="p-3 bg-gray-50 rounded-xl border border-gray-100 space-y-2">
+                {/* Name + meta — full width, never squeezed by buttons */}
+                <div className="flex items-start gap-2 min-w-0">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-medium text-gray-800 break-all">{doc.name}</p>
+                      {doc.is_global && (
+                        <span className="flex-shrink-0 text-[10px] font-semibold bg-brand-100 text-brand-700 px-1.5 py-0.5 rounded-full">
+                          Global
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-400 whitespace-nowrap mt-0.5">
+                      {doc.size_bytes ? fmtSize(doc.size_bytes) : ''}
+                      {doc.size_bytes ? ' · ' : ''}
+                      {new Date(doc.created_at).toLocaleDateString('ro-RO')}
+                    </p>
                   </div>
-                  <p className="text-xs text-gray-400">
-                    {doc.size_bytes ? fmtSize(doc.size_bytes) : ''}
-                    {doc.size_bytes ? ' · ' : ''}
-                    {new Date(doc.created_at).toLocaleDateString('ro-RO')}
-                  </p>
                 </div>
-                <div className="flex gap-2 flex-shrink-0 ml-3 flex-wrap justify-end">
+                {/* Action buttons — own row, never overlap name */}
+                <div className="flex gap-2 flex-wrap">
                   <button
                     onClick={() => handlePreview(doc)}
                     disabled={loadingPreviewId === doc.id}
