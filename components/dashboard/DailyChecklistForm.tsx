@@ -6,14 +6,24 @@ import { getPhaseFromWeek, PHASE_RECIPE_LINKS, DEFAULT_CHECKS, DEFAULT_SLIDERS }
 import MealSection from './MealSection'
 import SliderGroup from './SliderGroup'
 import SymptomsEditor from './SymptomsEditor'
-import type { DailyReport, DailyChecks, DailySliders, Symptom, MealChecks, SnackChecks, Profile } from '@/lib/types'
+import type { DailyReport, DailyChecks, DailySliders, Symptom, MealChecks, SnackChecks, Profile, ProgramPhase } from '@/lib/types'
 
 interface Props {
   profile: Profile
   existingReport: DailyReport | null
+  streak: number
 }
 
-export default function DailyChecklistForm({ profile, existingReport }: Props) {
+const PHASE_MESSAGES: Record<ProgramPhase, string> = {
+  'Detox 21':  `Excelent! Focusul tău de mâine: hidratare maximă și rețeta de supă vegetală. Corpul tău se curăță!`,
+  'Tranziție': `Bravo! Ești în faza de tranziție — sistemul tău digestiv se adaptează. Mâine: introdu treptat alimentele din Faza 1.`,
+  'Faza 1':    `Fantastic! Microbiomul tău prinde viață. Mâine: nu uita probioticele înainte de masă și verifică rețetele săptămânii.`,
+  'Faza 2':    `Extraordinar! Ești la jumătatea programului. Mâine: concentrează-te pe diversitatea alimentară și fermentate.`,
+  'Faza 3':    `Superb! Programul tiroidian lucrează pentru tine. Mâine: suplimentele de tiroidă dimineața și expunere la soare 10 minute.`,
+  'Faza 4':    `Incredibil! Ești în faza finală. Mâine: menține fereastra de post și hidratează-te bine.`,
+}
+
+export default function DailyChecklistForm({ profile, existingReport, streak }: Props) {
   const today = todayISO()
   const phase = getPhaseFromWeek(profile.week)
   const recipeLink = PHASE_RECIPE_LINKS[phase]
@@ -28,6 +38,8 @@ export default function DailyChecklistForm({ profile, existingReport }: Props) {
   const [symptoms, setSymptoms] = useState<Symptom[]>(
     existingReport?.symptoms ?? []
   )
+  const [note, setNote] = useState<string>(existingReport?.note ?? '')
+  const [showConfirm, setShowConfirm] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(!!existingReport)
   const [error, setError] = useState('')
@@ -51,6 +63,7 @@ export default function DailyChecklistForm({ profile, existingReport }: Props) {
       checks,
       sliders,
       symptoms,
+      note: note || null,
       saved_at: new Date().toISOString(),
     }
 
@@ -61,6 +74,34 @@ export default function DailyChecklistForm({ profile, existingReport }: Props) {
     setSaving(false)
     if (err) { setError(err.message); return }
     setSaved(true)
+    setShowConfirm(true)
+  }
+
+  if (showConfirm) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-6 py-12">
+        <div className="text-6xl">🎉</div>
+        <h2 className="text-2xl font-bold text-gray-900">Ziua {formatDate(today)} completată!</h2>
+        <div className="card max-w-md w-full text-left">
+          <p className="text-gray-700 leading-relaxed">{PHASE_MESSAGES[phase]}</p>
+        </div>
+        {streak > 0 && (
+          <div className="flex items-center gap-2 bg-brand-50 border border-brand-200 rounded-2xl px-6 py-3">
+            <span className="text-2xl">🔥</span>
+            <div>
+              <p className="font-bold text-brand-700 text-lg">{streak} {streak === 1 ? 'zi' : 'zile'} consecutiv</p>
+              <p className="text-xs text-brand-500">
+                {streak >= 30 ? '🏆 30 zile — legendă!' : streak >= 21 ? '🥇 21 zile — incredibil!' : streak >= 14 ? '🥈 14 zile — excelent!' : streak >= 7 ? '🥉 7 zile — bravo!' : 'Continuă!'}
+              </p>
+            </div>
+          </div>
+        )}
+        <div className="flex gap-3">
+          <a href="/istoric" className="btn-secondary">Vezi progresul</a>
+          <a href="/dashboard" className="btn-primary">Înapoi la dashboard</a>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -160,6 +201,17 @@ export default function DailyChecklistForm({ profile, existingReport }: Props) {
       <div className="card">
         <h3 className="font-semibold text-gray-800 mb-4">Simptome</h3>
         <SymptomsEditor symptoms={symptoms} onChange={s => { setSymptoms(s); setSaved(false) }} />
+      </div>
+
+      {/* Notița zilei */}
+      <div className="card">
+        <h3 className="font-semibold text-gray-800 mb-3">Notița zilei</h3>
+        <textarea
+          className="input min-h-[80px] resize-none"
+          placeholder="Cum te-ai simțit azi? Ce ai observat?"
+          value={note}
+          onChange={e => { setNote(e.target.value); setSaved(false) }}
+        />
       </div>
 
       {/* Save */}

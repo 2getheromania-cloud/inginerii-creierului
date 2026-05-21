@@ -94,6 +94,32 @@ export async function sendInactivityAlert(
   })
 }
 
+export async function sendPrivateChatNotification(
+  toEmail: string,
+  toName: string | null,
+  fromName: string,
+  preview: string,
+  isFromCursant: boolean
+) {
+  return client().emails.send({
+    from: FROM,
+    to: toEmail,
+    subject: `💬 Mesaj nou de la ${fromName}`,
+    html: `
+      <div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;padding:32px">
+        <h2 style="color:#166534">Mesaj nou</h2>
+        <p>Salut, ${toName || (isFromCursant ? 'Admin' : 'cursant')}!</p>
+        <p><strong>${fromName}</strong> ți-a trimis un mesaj:</p>
+        <blockquote style="border-left:3px solid #16a34a;padding-left:12px;color:#374151;font-style:italic">
+          "${preview.slice(0, 200)}${preview.length > 200 ? '...' : ''}"
+        </blockquote>
+        <a href="${appUrl()}/${isFromCursant ? 'admin' : 'mesaje'}" style="display:inline-block;background:#16a34a;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin:16px 0">
+          Răspunde
+        </a>
+      </div>`,
+  })
+}
+
 export async function sendManualNotification(email: string, subject: string, message: string) {
   return client().emails.send({
     from: FROM,

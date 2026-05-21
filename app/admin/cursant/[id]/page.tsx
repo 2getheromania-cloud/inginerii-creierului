@@ -4,7 +4,9 @@ import { redirect, notFound } from 'next/navigation'
 import AppShell from '@/components/layout/AppShell'
 import ProgressChart from '@/components/charts/ProgressChart'
 import AdminCursantClient from '@/components/admin/AdminCursantClient'
+import AdminPrivateChatClient from '@/components/admin/AdminPrivateChatClient'
 import DeleteUserButton from '@/components/admin/DeleteUserButton'
+import DocumenteClient from '@/components/documente/DocumenteClient'
 import { formatDate } from '@/lib/utils'
 import {
   getPhaseFromWeek,
@@ -17,6 +19,7 @@ import {
 import type { Profile, DailyReport, ProtocolFlags } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
+import { getOrCreateConversation } from '@/lib/conversations'
 
 const GENERAL_KEYS = [
   'Suplimente Microbiom',
@@ -40,6 +43,8 @@ export default async function AdminCursantPage({ params }: { params: { id: strin
     supabase.from('daily_reports').select('*').eq('user_id', params.id).order('date', { ascending: false }).limit(30),
     supabase.from('daily_reports').select('*').eq('user_id', params.id).order('date', { ascending: false }).limit(7),
   ])
+
+  const conversationId = await getOrCreateConversation(params.id)
 
   const phase        = getPhaseFromWeek(cursantProfile.week)
   const flags        = cursantProfile.flags as ProtocolFlags
@@ -74,6 +79,14 @@ export default async function AdminCursantPage({ params }: { params: { id: strin
 
         {/* ── Edit profile ── */}
         <AdminCursantClient profile={cursantProfile as Profile} />
+
+        {/* ── Chat privat ── */}
+        <div className="card">
+          <h3 className="font-semibold mb-4">Chat privat cu {userName}</h3>
+          <div className="h-80 flex flex-col border border-gray-200 rounded-xl overflow-hidden">
+            <AdminPrivateChatClient conversationId={conversationId} adminId={user.id} />
+          </div>
+        </div>
 
         {/* ── Protocoale active ── */}
         {activeFlags.length > 0 && (
@@ -112,17 +125,26 @@ export default async function AdminCursantPage({ params }: { params: { id: strin
           ) : (
             <div className="space-y-2">
               {(reports30 ?? []).map((r: DailyReport) => (
-                <div key={r.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-                  <span className="text-sm text-gray-700">{formatDate(r.date)}</span>
-                  <div className="flex gap-3 text-xs text-gray-500">
-                    <span>E: {r.sliders.energie}</span>
-                    <span>S: {r.sliders.somn}</span>
-                    <span>St: {r.sliders.stres}</span>
+                <div key={r.id} className="py-2 border-b border-gray-100 last:border-0">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-700">{formatDate(r.date)}</span>
+                    <div className="flex gap-3 text-xs text-gray-500">
+                      <span>E: {r.sliders.energie}</span>
+                      <span>S: {r.sliders.somn}</span>
+                      <span>St: {r.sliders.stres}</span>
+                    </div>
                   </div>
+                  {r.note && <p className="text-xs text-gray-500 mt-1 italic">"{r.note}"</p>}
                 </div>
               ))}
             </div>
           )}
+        </div>
+
+        {/* ── Documente cursant ── */}
+        <div className="card">
+          <h3 className="font-semibold mb-4">Documente cursant</h3>
+          <DocumenteClient userId={cursantProfile.id} isAdmin={true} targetUserId={cursantProfile.id} />
         </div>
 
         {/* ── Resurse curente ── */}

@@ -5,7 +5,7 @@ import AppShell from '@/components/layout/AppShell'
 import DailyChecklistForm from '@/components/dashboard/DailyChecklistForm'
 import AdminMessageCard from '@/components/dashboard/AdminMessageCard'
 import MotivationalCard from '@/components/dashboard/MotivationalCard'
-import { todayISO } from '@/lib/utils'
+import { todayISO, calcStreak } from '@/lib/utils'
 import { getPhaseFromWeek, PHASE_COLORS, PROTOCOL_LABELS, PROTOCOL_LINKS } from '@/lib/program'
 import type { DailyReport, ProtocolFlags, AdminMessage } from '@/lib/types'
 
@@ -37,14 +37,17 @@ export default async function DashboardPage() {
     { data: recentReports },
     { data: messagesRaw },
     { data: groupStatsRaw },
+    { data: allReports },
   ] = await Promise.all([
     supabase.from('daily_reports').select('*').eq('user_id', user.id).eq('date', today).single(),
     supabase.from('daily_reports').select('date').eq('user_id', user.id).gte('date', sevenDaysAgoStr),
     supabase.from('admin_messages').select('*').eq('is_active', true).lte('published_at', new Date().toISOString()).order('published_at', { ascending: false }),
     supabase.rpc('get_group_stats_last7'),
+    supabase.from('daily_reports').select('date').eq('user_id', user.id).order('date', { ascending: false }).limit(60),
   ])
 
   const userDaysCompleted = recentReports?.length ?? 0
+  const streak = calcStreak(allReports ?? [])
   const groupStats = groupStatsRaw as { avg_reports: number; max_reports: number; total_users: number } | null
 
   // Filter messages to only those relevant to this cursant
@@ -105,9 +108,22 @@ export default async function DashboardPage() {
           </div>
         )}
 
+        {streak > 0 && (
+          <div className="flex items-center gap-3 bg-orange-50 border border-orange-200 rounded-2xl px-5 py-3">
+            <span className="text-2xl">🔥</span>
+            <div>
+              <p className="font-bold text-orange-700">{streak} {streak === 1 ? 'zi' : 'zile'} consecutive</p>
+              <p className="text-xs text-orange-500">
+                {streak >= 30 ? 'Legendă! 30 de zile!' : streak >= 21 ? '21 zile — incredibil!' : streak >= 14 ? '14 zile — excelent!' : streak >= 7 ? '7 zile — bravo!' : 'Continuă streak-ul!'}
+              </p>
+            </div>
+          </div>
+        )}
+
         <DailyChecklistForm
           profile={profile}
           existingReport={todayReport as DailyReport | null}
+          streak={streak}
         />
       </div>
     </AppShell>

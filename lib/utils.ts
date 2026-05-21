@@ -38,6 +38,29 @@ export function getSliderColor(value: number): string {
   return 'text-green-500'
 }
 
+export function calcStreak(reports: { date: string }[]): number {
+  if (!reports.length) return 0
+  const today = todayISO()
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  const yesterdayISO = yesterday.toISOString().split('T')[0]
+
+  const dateSet = new Set(reports.map(r => r.date))
+
+  const startDate = dateSet.has(today) ? today : dateSet.has(yesterdayISO) ? yesterdayISO : null
+  if (!startDate) return 0
+
+  let streak = 0
+  const cursor = new Date(startDate)
+  while (true) {
+    const iso = cursor.toISOString().split('T')[0]
+    if (!dateSet.has(iso)) break
+    streak++
+    cursor.setDate(cursor.getDate() - 1)
+  }
+  return streak
+}
+
 export function getVideoEmbedUrl(url: string): string | null {
   try {
     const u = new URL(url)

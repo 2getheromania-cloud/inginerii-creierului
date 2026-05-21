@@ -7,6 +7,7 @@ import type { Profile, ProtocolFlags } from '@/lib/types'
 
 export default function ProfilClient({ profile }: { profile: Profile }) {
   const [name, setName] = useState(profile.name ?? '')
+  const [reminderTime, setReminderTime] = useState(profile.reminder_time ?? '18:00')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
@@ -18,7 +19,7 @@ export default function ProfilClient({ profile }: { profile: Profile }) {
     setError('')
     const { error: err } = await supabase
       .from('profiles')
-      .update({ name: name.trim() })
+      .update({ name: name.trim(), reminder_time: reminderTime })
       .eq('id', profile.id)
     setSaving(false)
     if (err) { setError(err.message); return }
@@ -55,6 +56,16 @@ export default function ProfilClient({ profile }: { profile: Profile }) {
             <label className="label">Email</label>
             <input type="email" className="input bg-gray-50" value={profile.email} disabled />
             <p className="text-xs text-gray-400 mt-1">Email-ul nu poate fi modificat.</p>
+          </div>
+          <div>
+            <label className="label">Ora reminder zilnic</label>
+            <input
+              type="time"
+              className="input"
+              value={reminderTime}
+              onChange={e => setReminderTime(e.target.value)}
+            />
+            <p className="text-xs text-gray-400 mt-1">Vei primi un reminder dacă nu ai completat raportul până la această oră.</p>
           </div>
           {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
           <button type="submit" className="btn-primary" disabled={saving}>

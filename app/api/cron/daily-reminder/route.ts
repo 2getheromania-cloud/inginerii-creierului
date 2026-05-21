@@ -9,12 +9,13 @@ export async function GET(request: NextRequest) {
   }
 
   const service = createServiceClient()
-  const today = new Date().toISOString().split('T')[0]
+  const now = new Date()
+  const currentHour = String(now.getUTCHours()).padStart(2, '0')
+  const today = now.toISOString().split('T')[0]
 
-  // Cursanți care nu au raportat azi
   const { data: cursanti } = await service
     .from('profiles')
-    .select('id, name, email')
+    .select('id, name, email, reminder_time')
     .eq('role', 'cursant')
 
   if (!cursanti?.length) return NextResponse.json({ ok: true, sent: 0 })
@@ -25,7 +26,13 @@ export async function GET(request: NextRequest) {
     .eq('date', today)
 
   const reportedIds = new Set((todayReports ?? []).map(r => r.user_id))
-  const toRemind = cursanti.filter(c => !reportedIds.has(c.id))
+
+  const toRemind = cursanti.filter(c => {
+    if (reportedIds.has(c.id)) return false
+    const rt = c.reminder_time ?? '18:00'
+    const [h] = rt.split(':')
+    return h.padStart(2, '0') === currentHour
+  })
 
   let sent = 0
   for (const c of toRemind) {

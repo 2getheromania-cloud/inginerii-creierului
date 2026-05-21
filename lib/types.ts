@@ -9,6 +9,7 @@ export interface Profile {
   flags: ProtocolFlags
   saved_dates: Record<string, string>
   created_at: string
+  reminder_time?: string
 }
 
 export interface ProtocolFlags {
@@ -67,6 +68,7 @@ export interface DailyReport {
   sliders: DailySliders
   symptoms: Symptom[]
   saved_at: string
+  note?: string | null
 }
 
 export interface Notification {
@@ -108,6 +110,31 @@ export interface AdminMessage {
   target_value: string | null
   is_active: boolean
   published_at: string
+  created_at: string
+}
+
+export interface Document {
+  id: string
+  user_id: string
+  name: string
+  file_path: string
+  size_bytes: number | null
+  uploaded_by: string
+  created_at: string
+}
+
+export interface Conversation {
+  id: string
+  user_id: string
+  created_at: string
+}
+
+export interface PrivateMessage {
+  id: string
+  conversation_id: string
+  sender_id: string
+  content: string
+  read: boolean
   created_at: string
 }
 

@@ -298,3 +298,95 @@ CREATE INDEX IF NOT EXISTS idx_gcm_pinned
 -- Rulează după ce userul s-a autentificat prima dată
 -- ============================================================
 -- UPDATE public.profiles SET role = 'admin' WHERE email = '2getheromania@gmail.com';
+
+-- ============================================================
+-- NEW FEATURES — 2025
+-- ============================================================
+
+-- Daily notes
+ALTER TABLE public.daily_reports ADD COLUMN IF NOT EXISTS note TEXT;
+
+-- Reminder time per user (HH:MM format, default 18:00)
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS reminder_time TEXT NOT NULL DEFAULT '18:00';
+
+-- Documents
+CREATE TABLE IF NOT EXISTS public.documents (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id       UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  name          TEXT NOT NULL,
+  file_path     TEXT NOT NULL,
+  size_bytes    BIGINT,
+  uploaded_by   UUID NOT NULL REFERENCES public.profiles(id),
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE public.documents ENABLE ROW LEVEL SECURITY;
+CREATE POLICY IF NOT EXISTS "docs_cursant_select" ON public.documents
+  FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY IF NOT EXISTS "docs_admin_all" ON public.documents
+  FOR ALL USING (public.is_admin());
+CREATE POLICY IF NOT EXISTS "docs_cursant_insert" ON public.documents
+  FOR INSERT WITH CHECK (auth.uid() = user_id AND auth.uid() = uploaded_by);
+CREATE POLICY IF NOT EXISTS "docs_cursant_delete" ON public.documents
+  FOR DELETE USING (auth.uid() = user_id AND uploaded_by = user_id);
+
+-- Conversations (one per cursant)
+CREATE TABLE IF NOT EXISTS public.conversations (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID NOT NULL UNIQUE REFERENCES public.profiles(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
+CREATE POLICY IF NOT EXISTS "conv_select" ON public.conversations
+  FOR SELECT USING (auth.uid() = user_id OR public.is_admin());
+CREATE POLICY IF NOT EXISTS "conv_insert" ON public.conversations
+  FOR INSERT WITH CHECK (auth.uid() = user_id OR public.is_admin());
+
+-- Private messages
+CREATE TABLE IF NOT EXISTS public.private_messages (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id UUID NOT NULL REFERENCES public.conversations(id) ON DELETE CASCADE,
+  sender_id       UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  content         TEXT NOT NULL,
+  read            BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE public.private_messages ENABLE ROW LEVEL SECURITY;
+CREATE POLICY IF NOT EXISTS "pmsg_select" ON public.private_messages
+  FOR SELECT USING (
+    public.is_admin() OR
+    EXISTS (SELECT 1 FROM public.conversations c WHERE c.id = conversation_id AND c.user_id = auth.uid())
+  );
+CREATE POLICY IF NOT EXISTS "pmsg_insert" ON public.private_messages
+  FOR INSERT WITH CHECK (
+    auth.uid() = sender_id AND (
+      public.is_admin() OR
+      EXISTS (SELECT 1 FROM public.conversations c WHERE c.id = conversation_id AND c.user_id = auth.uid())
+    )
+  );
+CREATE POLICY IF NOT EXISTS "pmsg_update" ON public.private_messages
+  FOR UPDATE USING (
+    public.is_admin() OR
+    EXISTS (SELECT 1 FROM public.conversations c WHERE c.id = conversation_id AND c.user_id = auth.uid())
+  );
+CREATE INDEX IF NOT EXISTS idx_pmsg_conv ON public.private_messages (conversation_id, created_at);
+
+-- Realtime for private messages
+ALTER PUBLICATION supabase_realtime ADD TABLE public.private_messages;
+
+-- Storage policies for documents bucket (bucket must be created manually as private)
+-- INSERT INTO storage.buckets (id, name, public) VALUES ('documents', 'documents', false) ON CONFLICT DO NOTHING;
+CREATE POLICY IF NOT EXISTS "docs_storage_select" ON storage.objects
+  FOR SELECT USING (
+    bucket_id = 'documents' AND
+    (auth.uid()::text = (storage.foldername(name))[1] OR public.is_admin())
+  );
+CREATE POLICY IF NOT EXISTS "docs_storage_insert" ON storage.objects
+  FOR INSERT WITH CHECK (
+    bucket_id = 'documents' AND auth.uid() IS NOT NULL AND
+    (auth.uid()::text = (storage.foldername(name))[1] OR public.is_admin())
+  );
+CREATE POLICY IF NOT EXISTS "docs_storage_delete" ON storage.objects
+  FOR DELETE USING (
+    bucket_id = 'documents' AND
+    (auth.uid()::text = (storage.foldername(name))[1] OR public.is_admin())
+  );

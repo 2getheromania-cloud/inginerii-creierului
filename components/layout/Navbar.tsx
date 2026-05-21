@@ -10,6 +10,8 @@ const CURSANT_NAV = [
   { href: '/chat',      label: 'Comunitate' },
   { href: '/istoric',   label: 'Istoric' },
   { href: '/resurse',   label: 'Resurse' },
+  { href: '/documente', label: 'Documente' },
+  { href: '/mesaje',    label: 'Mesaje' },
   { href: '/profil',    label: 'Profil' },
 ]
 

@@ -68,6 +68,55 @@ export default function IstoricClient({ reports }: { reports: DailyReport[] }) {
             <h3 className="font-semibold text-gray-800 mb-4">Indicatori de stare</h3>
             <ProgressChart reports={filtered} type="line" days={period} />
           </div>
+
+          <div className="card">
+            <h3 className="font-semibold text-gray-800 mb-4">Calendar activitate (30 zile)</h3>
+            <div className="grid grid-cols-7 gap-1.5">
+              {Array.from({ length: 30 }, (_, i) => {
+                const d = new Date()
+                d.setDate(d.getDate() - (29 - i))
+                const iso = d.toISOString().split('T')[0]
+                const hasReport = reports.some(r => r.date === iso)
+                return (
+                  <div
+                    key={iso}
+                    title={iso}
+                    className={`aspect-square rounded-lg flex items-center justify-center text-xs font-medium ${
+                      hasReport ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-400'
+                    }`}
+                  >
+                    {d.getDate()}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="card">
+            <h3 className="font-semibold text-gray-800 mb-4">Comparație săptămâni</h3>
+            <div className="grid grid-cols-2 gap-4">
+              {(['energie','somn','stres','stare_generala','productivitate'] as const).map(key => {
+                const label = SLIDER_LABELS[key]
+                const thisWeek = reports.slice(0,7)
+                const prevWeek = reports.slice(7,14)
+                const avg = (arr: typeof reports) => arr.length ? arr.reduce((s,r) => s + (r.sliders[key]||0), 0) / arr.length : 0
+                const curr = avg(thisWeek)
+                const prev = avg(prevWeek)
+                const diff = curr - prev
+                return (
+                  <div key={key} className="bg-gray-50 rounded-xl p-3">
+                    <p className="text-xs text-gray-500 mb-1">{label}</p>
+                    <p className="text-xl font-bold text-gray-800">{curr.toFixed(1)}</p>
+                    {prev > 0 && (
+                      <p className={`text-xs font-medium ${diff >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                        {diff >= 0 ? '+' : ''}{diff.toFixed(1)} față de săpt. anterioară
+                      </p>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
         </div>
       )}
 
