@@ -105,56 +105,45 @@ function MessageBubble({
           </div>
         )}
 
-        {/* Action bar — always visible, no hover dependency */}
+        {/* Action bar — inline styles, always visible, no hover/breakpoint dependency */}
         {!isOptimistic && (
-          <div className={`flex items-center ${isOwn ? 'flex-row-reverse' : ''}`}>
-
-            {/* 😊 React */}
-            <div className="relative">
-              <button type="button"
-                onClick={() => setShowPicker(p => !p)}
-                className="w-10 h-10 flex items-center justify-center text-base rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition-colors"
-              >😊</button>
-
-              {showPicker && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowPicker(false)} />
-                  {/* Mobile: bottom sheet */}
-                  <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-2xl px-6 pb-6 pt-3 sm:hidden">
-                    <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
-                    <div className="flex justify-around">
-                      {REACTION_EMOJIS.map(e => (
-                        <button key={e} onClick={() => { onReact(msg.id, e); setShowPicker(false) }}
-                          className="w-12 h-12 flex items-center justify-center text-2xl active:scale-95 transition-transform"
-                        >{e}</button>
-                      ))}
-                    </div>
-                    <button onClick={() => setShowPicker(false)} className="w-full mt-4 py-3 text-sm text-gray-400 border-t border-gray-100">Anulează</button>
-                  </div>
-                  {/* Desktop: popover */}
-                  <div className={`absolute bottom-full mb-1 z-50 hidden sm:flex gap-1 bg-white border border-gray-200 rounded-full shadow-lg px-2 py-1.5 ${isOwn ? 'right-0' : 'left-0'}`}>
-                    {REACTION_EMOJIS.map(e => (
-                      <button key={e} onClick={() => { onReact(msg.id, e); setShowPicker(false) }}
-                        className="text-lg hover:scale-125 active:scale-110 transition-transform leading-none"
-                      >{e}</button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* ↩️ Reply */}
+          <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap', justifyContent: isOwn ? 'flex-end' : 'flex-start' }}>
+            <button type="button" onClick={() => setShowPicker(p => !p)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '4px 10px', borderRadius: 20, background: '#f3f4f6', color: '#374151', fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer' }}>
+              <span>😊</span><span>Reacție</span>
+            </button>
             <button type="button" onClick={() => onReply(msg)}
-              className="w-10 h-10 flex items-center justify-center text-base rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition-colors"
-            >↩️</button>
-
-            {/* ✏️ Edit (own only) */}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '4px 10px', borderRadius: 20, background: '#f3f4f6', color: '#374151', fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer' }}>
+              <span>↩️</span><span>Răspunde</span>
+            </button>
             {isOwn && !isEditing && (
               <button type="button" onClick={() => { setIsEditing(true); setDraft(msg.content) }}
-                className="w-10 h-10 flex items-center justify-center text-base rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition-colors"
-              >✏️</button>
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '4px 10px', borderRadius: 20, background: '#f3f4f6', color: '#374151', fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer' }}>
+                <span>✏️</span><span>Editează</span>
+              </button>
             )}
           </div>
+        )}
+
+        {/* Emoji picker — fixed bottom sheet, no sm:hidden, works on all screens */}
+        {showPicker && (
+          <>
+            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 40 }} onClick={() => setShowPicker(false)} />
+            <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, background: 'white', borderRadius: '20px 20px 0 0', boxShadow: '0 -4px 24px rgba(0,0,0,0.18)', padding: '12px 24px 32px' }}>
+              <div style={{ width: 40, height: 4, background: '#e5e7eb', borderRadius: 2, margin: '0 auto 16px' }} />
+              <div style={{ display: 'flex', justifyContent: 'space-around', marginBottom: 12 }}>
+                {REACTION_EMOJIS.map(e => (
+                  <button key={e} onClick={() => { onReact(msg.id, e); setShowPicker(false) }}
+                    style={{ width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, border: 'none', background: 'transparent', cursor: 'pointer' }}
+                  >{e}</button>
+                ))}
+              </div>
+              <button onClick={() => setShowPicker(false)}
+                style={{ width: '100%', padding: '12px 0', fontSize: 13, color: '#9ca3af', background: 'transparent', border: 'none', borderTop: '1px solid #f3f4f6', cursor: 'pointer' }}>
+                Anulează
+              </button>
+            </div>
+          </>
         )}
       </div>
     </div>
