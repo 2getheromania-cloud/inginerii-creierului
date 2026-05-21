@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { todayISO } from '@/lib/utils'
@@ -17,6 +17,9 @@ export default function AdminCursantClient({ profile }: { profile: Profile }) {
   const [error,   setError]   = useState('')
   const supabase  = createClient()
   const router    = useRouter()
+
+  // Reset saved banner when server refreshes the profile prop after router.refresh()
+  useEffect(() => { setSaved(false) }, [profile])
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
