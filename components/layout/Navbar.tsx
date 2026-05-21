@@ -23,6 +23,7 @@ const ADMIN_NAV = [
   { href: '/mesaje',             label: 'Mesaje' },
   { href: '/biblioteca',         label: 'Bibliotecă' },
   { href: '/documente',          label: 'Documente' },
+  { href: '/resurse',            label: 'Resurse' },
   { href: '/admin/notificari',   label: 'Notificări' },
   { href: '/admin/rapoarte',     label: 'Rapoarte' },
   { href: '/admin/setari',       label: 'Setări' },

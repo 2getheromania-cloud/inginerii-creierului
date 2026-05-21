@@ -3,8 +3,9 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import type { ChatMessage, ChatReplyPreview } from '@/lib/types'
 import ChatMessageBubble from './ChatMessage'
 import ChatInput from './ChatInput'
+import { createClient } from '@/lib/supabase/client'
 
-const POLL_MS = 8000
+const POLL_MS = 20000 // fallback polling; realtime handles instant delivery
 
 interface Props {
   initialMessages: ChatMessage[]
@@ -72,7 +73,36 @@ export default function ChatClient({ initialMessages, userId, userRole }: Props)
     isAtBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120
   }
 
-  // 8-second polling for new messages
+  // Supabase realtime — instant delivery when any user posts a new message
+  useEffect(() => {
+    const sb = createClient()
+    const channel = sb
+      .channel('group-chat-realtime')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'group_chat_messages',
+      }, async () => {
+        try {
+          const res = await fetch(`/api/chat/messages?since=${encodeURIComponent(latestTsRef.current)}`)
+          if (!res.ok) return
+          const newMsgs: ChatMessage[] = await res.json()
+          if (!newMsgs.length) return
+          setMessages(prev => {
+            const map = new Map(prev.map(m => [m.id, m]))
+            newMsgs.forEach(m => map.set(m.id, m))
+            return sortedValues(map)
+          })
+          latestTsRef.current = newMsgs.at(-1)!.created_at
+          setTimeout(() => scrollToBottom(), 50)
+        } catch {}
+      })
+      .subscribe()
+    return () => { sb.removeChannel(channel) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Fallback polling — catches reactions/edits/deletes missed by realtime
   useEffect(() => {
     const interval = setInterval(async () => {
       try {

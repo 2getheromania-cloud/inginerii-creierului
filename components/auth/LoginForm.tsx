@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { createClient as createVanillaClient } from '@supabase/supabase-js'
 
@@ -18,7 +18,6 @@ function vanillaImplicit() {
 type Screen = 'email' | 'otp-sent' | 'magic-sent'
 
 export default function LoginForm() {
-  const router      = useRouter()
   const params      = useSearchParams()
   const supabase    = createClient()  // SSR client — persists session in cookies
 
@@ -95,8 +94,9 @@ export default function LoginForm() {
     if (data.user) {
       const { data: prof } = await supabase
         .from('profiles').select('role').eq('id', data.user.id).single()
-      router.push((prof as { role?: string } | null)?.role === 'admin' ? '/admin' : '/dashboard')
-      router.refresh()
+      const dest = (prof as { role?: string } | null)?.role === 'admin' ? '/admin' : '/dashboard'
+      // Full page reload so the middleware reads the new session cookie on iOS PWA
+      window.location.replace(dest)
     }
   }
 

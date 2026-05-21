@@ -1,10 +1,9 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 export default function AuthConfirmClient() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const done = useRef(false)
   const [phase, setPhase]     = useState<'loading' | 'error'>('loading')
@@ -45,7 +44,8 @@ export default function AuthConfirmClient() {
         .eq('id', userId)
         .single()
 
-      router.replace(profile?.role === 'admin' ? '/admin' : '/dashboard')
+      // Full page reload so middleware picks up the session cookie on iOS PWA
+      window.location.replace(profile?.role === 'admin' ? '/admin' : '/dashboard')
     }
 
     function doFail(supabaseMsg?: string) {
