@@ -39,7 +39,7 @@ export default async function IntalniriPage() {
             <div className="flex-1 min-w-0">
               <h2 className="text-lg font-semibold text-gray-900">Întâlnire de grup pe Zoom</h2>
               <p className="text-sm text-gray-500 mt-0.5">
-                Zi și oră: <span className="font-medium text-gray-700">de confirmat</span>
+                <span className="font-medium text-gray-700">Luni, 19:30</span>
               </p>
             </div>
           </div>
