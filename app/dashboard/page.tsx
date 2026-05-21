@@ -7,6 +7,7 @@ import AdminMessageCard from '@/components/dashboard/AdminMessageCard'
 import MotivationalCard from '@/components/dashboard/MotivationalCard'
 import WeeklySummaryCard from '@/components/dashboard/WeeklySummaryCard'
 import CommunityWinsCard from '@/components/dashboard/CommunityWinsCard'
+import BrowserNotifCard from '@/components/dashboard/BrowserNotifCard'
 import { todayISO, calcStreak } from '@/lib/utils'
 import { getPhaseFromWeek, PHASE_COLORS, PROTOCOL_LABELS, PROTOCOL_LINKS } from '@/lib/program'
 import type { DailyReport, ProtocolFlags, AdminMessage } from '@/lib/types'
@@ -129,6 +130,8 @@ export default async function DashboardPage() {
             </div>
           </div>
         )}
+
+        <BrowserNotifCard />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <WeeklySummaryCard
