@@ -127,6 +127,7 @@ export interface Document {
   file_path: string
   size_bytes: number | null
   uploaded_by: string
+  is_global: boolean
   created_at: string
 }
 

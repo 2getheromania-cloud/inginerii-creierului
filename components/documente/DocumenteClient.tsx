@@ -15,9 +15,12 @@ export default function DocumenteClient({ userId, isAdmin, targetUserId }: Props
   const [documents, setDocuments] = useState<Document[]>([])
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isGlobal, setIsGlobal] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const targetId = targetUserId ?? userId
+  // Show global controls only when admin is on their own /documente page
+  const showGlobalControls = isAdmin && !targetUserId
 
   useEffect(() => {
     const params = targetId !== userId ? `?user_id=${targetId}` : ''
@@ -42,6 +45,9 @@ export default function DocumenteClient({ userId, isAdmin, targetUserId }: Props
     const form = new FormData()
     form.append('file', file)
     form.append('user_id', targetId)
+    if (showGlobalControls && isGlobal) {
+      form.append('is_global', 'true')
+    }
 
     try {
       const res = await fetch('/api/documents', { method: 'POST', body: form })
@@ -52,7 +58,6 @@ export default function DocumenteClient({ userId, isAdmin, targetUserId }: Props
         return
       }
 
-      // Optimistic local prepend — no refetch needed
       setDocuments(prev => [data as Document, ...prev])
     } catch {
       setError('Eroare de rețea. Încearcă din nou.')
@@ -74,6 +79,25 @@ export default function DocumenteClient({ userId, isAdmin, targetUserId }: Props
       window.open(data.url, '_blank')
     } catch {
       setError('Eroare la descărcare.')
+    }
+  }
+
+  async function handleToggleGlobal(doc: Document) {
+    const next = !doc.is_global
+    try {
+      const res = await fetch(`/api/documents/${doc.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_global: next }),
+      })
+      if (res.ok) {
+        setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, is_global: next } : d))
+      } else {
+        const d = await res.json().catch(() => ({})) as { error?: string }
+        setError(d.error ?? 'Eroare la actualizare.')
+      }
+    } catch {
+      setError('Eroare de rețea.')
     }
   }
 
@@ -102,7 +126,7 @@ export default function DocumenteClient({ userId, isAdmin, targetUserId }: Props
         </div>
       )}
 
-      <div>
+      <div className="space-y-2">
         <input
           ref={fileRef}
           type="file"
@@ -117,7 +141,18 @@ export default function DocumenteClient({ userId, isAdmin, targetUserId }: Props
         >
           {uploading ? 'Se încarcă...' : 'Încarcă document'}
         </button>
-        <p className="text-xs text-gray-400 mt-1">PDF, JPG, PNG, DOCX — max 10 MB</p>
+        <p className="text-xs text-gray-400">PDF, JPG, PNG, DOCX — max 10 MB</p>
+        {showGlobalControls && (
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={isGlobal}
+              onChange={e => setIsGlobal(e.target.checked)}
+              className="w-4 h-4 accent-brand-600"
+            />
+            <span className="text-sm text-gray-600">Vizibil tuturor cursanților</span>
+          </label>
+        )}
       </div>
 
       {documents.length === 0 ? (
@@ -127,7 +162,14 @@ export default function DocumenteClient({ userId, isAdmin, targetUserId }: Props
           {documents.map(doc => (
             <div key={doc.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-gray-800 truncate">{doc.name}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-gray-800 truncate">{doc.name}</p>
+                  {doc.is_global && (
+                    <span className="flex-shrink-0 text-[10px] font-semibold bg-brand-100 text-brand-700 px-1.5 py-0.5 rounded-full">
+                      Global
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-gray-400">
                   {doc.size_bytes ? fmtSize(doc.size_bytes) : ''}
                   {doc.size_bytes ? ' · ' : ''}
@@ -138,6 +180,18 @@ export default function DocumenteClient({ userId, isAdmin, targetUserId }: Props
                 <button onClick={() => handleDownload(doc)} className="btn-secondary text-xs py-1 px-3">
                   Descarcă
                 </button>
+                {showGlobalControls && (
+                  <button
+                    onClick={() => handleToggleGlobal(doc)}
+                    className={`text-xs py-1 px-3 rounded-lg border transition-colors ${
+                      doc.is_global
+                        ? 'border-brand-200 text-brand-600 hover:bg-brand-50'
+                        : 'border-gray-200 text-gray-500 hover:bg-gray-100'
+                    }`}
+                  >
+                    {doc.is_global ? 'Retrage' : 'Distribuie'}
+                  </button>
+                )}
                 {(isAdmin || doc.uploaded_by === userId) && (
                   <button
                     onClick={() => handleDelete(doc.id)}

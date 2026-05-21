@@ -37,6 +37,31 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   return NextResponse.json({ url: data.signedUrl })
 }
 
+// Toggle is_global — admin only
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+  const authClient = createClient()
+  const { data: { user } } = await authClient.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { data: profile } = await service().from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  const body = await req.json().catch(() => ({})) as { is_global?: boolean }
+  if (typeof body.is_global !== 'boolean') {
+    return NextResponse.json({ error: 'is_global boolean required' }, { status: 400 })
+  }
+
+  const { data, error } = await service()
+    .from('documents')
+    .update({ is_global: body.is_global })
+    .eq('id', params.id)
+    .select()
+    .single()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json(data)
+}
+
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   const authClient = createClient()
   const { data: { user } } = await authClient.auth.getUser()

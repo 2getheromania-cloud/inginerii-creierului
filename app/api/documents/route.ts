@@ -19,11 +19,12 @@ export async function GET(req: NextRequest) {
 
   if (targetId !== user.id && !isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { data, error } = await service()
-    .from('documents')
-    .select('*')
-    .eq('user_id', targetId)
-    .order('created_at', { ascending: false })
+  // Cursanții văd propriile documente + cele globale; adminii văd doar user_id targetat
+  const sb = service().from('documents').select('*')
+  const query = !isAdmin
+    ? sb.or(`user_id.eq.${targetId},is_global.eq.true`)
+    : sb.eq('user_id', targetId)
+  const { data, error } = await query.order('created_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data ?? [])
@@ -45,6 +46,7 @@ export async function POST(req: NextRequest) {
 
   const file = form.get('file') as File | null
   const targetId = (form.get('user_id') as string | null) ?? user.id
+  const isGlobalReq = form.get('is_global') === 'true'
 
   if (!file || file.size === 0) return NextResponse.json({ error: 'Niciun fișier selectat.' }, { status: 400 })
   if (file.size > MAX_BYTES) return NextResponse.json({ error: 'Fișierul depășește 10 MB.' }, { status: 400 })
@@ -52,6 +54,7 @@ export async function POST(req: NextRequest) {
   const { data: profile } = await service().from('profiles').select('role').eq('id', user.id).single()
   const isAdmin = profile?.role === 'admin'
   if (targetId !== user.id && !isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const isGlobal = isAdmin && isGlobalReq
 
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
   const filePath = `${targetId}/${Date.now()}_${safeName}`
@@ -74,6 +77,7 @@ export async function POST(req: NextRequest) {
       file_path: filePath,
       size_bytes: file.size,
       uploaded_by: user.id,
+      is_global: isGlobal,
     })
     .select()
     .single()
