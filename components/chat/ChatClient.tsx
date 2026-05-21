@@ -226,11 +226,7 @@ export default function ChatClient({ initialMessages, userId, userRole }: Props)
   const pinnedMessages = messages.filter(m => m.is_pinned && !m.is_announcement)
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden" data-version="mobile-chat-v3">
-      {/* Deployment verification banner — remove after confirming mobile update */}
-      <div style={{ background: '#7c3aed', color: 'white', textAlign: 'center', padding: '4px 8px', fontSize: 11, fontWeight: 700, letterSpacing: 1, flexShrink: 0 }}>
-        MOBILE CHAT V3
-      </div>
+    <div className="flex-1 flex flex-col overflow-hidden">
       {/* Search toolbar — always rendered, toggles between icon and full bar */}
       {searchOpen ? (
         <div className="flex items-center gap-2 px-3 py-2 bg-white border-b border-gray-100 flex-shrink-0">
