@@ -2,6 +2,11 @@
 import { useState, useEffect } from 'react'
 import type { ProtocolType } from '@/lib/types'
 
+function isValidUrl(v: string) {
+  if (!v.trim()) return true
+  try { new URL(v.trim()); return true } catch { return false }
+}
+
 export default function ProtocolTypesManager() {
   const [items, setItems]       = useState<ProtocolType[]>([])
   const [loading, setLoading]   = useState(true)
@@ -9,6 +14,11 @@ export default function ProtocolTypesManager() {
   const [newName, setNewName]   = useState('')
   const [newUrl, setNewUrl]     = useState('')
   const [adding, setAdding]     = useState(false)
+
+  const [editingId, setEditingId]   = useState<string | null>(null)
+  const [editUrl, setEditUrl]       = useState('')
+  const [savingUrl, setSavingUrl]   = useState(false)
+  const [urlError, setUrlError]     = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/admin/protocol-types')
@@ -21,6 +31,7 @@ export default function ProtocolTypesManager() {
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
     if (!newName.trim()) return
+    if (newUrl.trim() && !isValidUrl(newUrl)) { setError('URL invalid.'); return }
     setAdding(true)
     setError(null)
     try {
@@ -57,6 +68,44 @@ export default function ProtocolTypesManager() {
       }
     } catch {
       setError('Eroare de rețea.')
+    }
+  }
+
+  function startEditUrl(item: ProtocolType) {
+    setEditingId(item.id)
+    setEditUrl(item.drive_url ?? '')
+    setUrlError(null)
+  }
+
+  function cancelEditUrl() {
+    setEditingId(null)
+    setEditUrl('')
+    setUrlError(null)
+  }
+
+  async function handleSaveUrl(item: ProtocolType) {
+    const trimmed = editUrl.trim()
+    if (trimmed && !isValidUrl(trimmed)) { setUrlError('URL invalid. Trebuie să înceapă cu https://'); return }
+    setSavingUrl(true)
+    setUrlError(null)
+    try {
+      const res = await fetch(`/api/admin/protocol-types/${item.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ drive_url: trimmed || null }),
+      })
+      if (res.ok) {
+        setItems(prev => prev.map(p => p.id === item.id ? { ...p, drive_url: trimmed || null } : p))
+        setEditingId(null)
+        setEditUrl('')
+      } else {
+        const d = await res.json().catch(() => ({})) as { error?: string }
+        setUrlError(d.error ?? 'Eroare la salvare.')
+      }
+    } catch {
+      setUrlError('Eroare de rețea.')
+    } finally {
+      setSavingUrl(false)
     }
   }
 
@@ -110,42 +159,94 @@ export default function ProtocolTypesManager() {
         {items.map(item => (
           <div
             key={item.id}
-            className={`flex items-center justify-between p-3 rounded-xl border transition-colors ${
+            className={`rounded-xl border transition-colors ${
               item.is_active ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-100 opacity-60'
             }`}
           >
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-800">{item.name}</span>
-                {!item.is_active && (
-                  <span className="text-[10px] font-semibold bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded-full">
-                    Inactiv
-                  </span>
+            {/* Main row */}
+            <div className="flex items-center justify-between p-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-medium text-gray-800">{item.name}</span>
+                  {!item.is_active && (
+                    <span className="text-[10px] font-semibold bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded-full">
+                      Inactiv
+                    </span>
+                  )}
+                  {!item.drive_url && item.is_active && (
+                    <span className="text-[10px] font-semibold bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full">
+                      Fără link
+                    </span>
+                  )}
+                </div>
+                {item.drive_url && editingId !== item.id && (
+                  <a
+                    href={item.drive_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-brand-600 hover:underline truncate block max-w-xs mt-0.5"
+                  >
+                    {item.drive_url}
+                  </a>
                 )}
               </div>
-              {item.drive_url && (
-                <a
-                  href={item.drive_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-brand-600 hover:underline truncate block max-w-xs"
+              <div className="flex gap-2 flex-shrink-0 ml-3">
+                <button
+                  onClick={() => editingId === item.id ? cancelEditUrl() : startEditUrl(item)}
+                  className="text-xs py-1 px-3 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 transition-colors"
                 >
-                  {item.drive_url}
-                </a>
-              )}
+                  {editingId === item.id ? 'Anulează' : 'Editează link'}
+                </button>
+                <button
+                  onClick={() => handleToggleActive(item)}
+                  className={`text-xs py-1 px-3 rounded-lg border transition-colors ${
+                    item.is_active
+                      ? 'border-gray-200 text-gray-500 hover:bg-gray-100'
+                      : 'border-green-200 text-green-600 hover:bg-green-50'
+                  }`}
+                >
+                  {item.is_active ? 'Dezactivează' : 'Activează'}
+                </button>
+              </div>
             </div>
-            <div className="flex gap-2 flex-shrink-0 ml-3">
-              <button
-                onClick={() => handleToggleActive(item)}
-                className={`text-xs py-1 px-3 rounded-lg border transition-colors ${
-                  item.is_active
-                    ? 'border-gray-200 text-gray-500 hover:bg-gray-100'
-                    : 'border-green-200 text-green-600 hover:bg-green-50'
-                }`}
-              >
-                {item.is_active ? 'Dezactivează' : 'Activează'}
-              </button>
-            </div>
+
+            {/* Inline URL editor */}
+            {editingId === item.id && (
+              <div className="px-3 pb-3 border-t border-gray-100 pt-3 space-y-2">
+                <label className="text-xs font-medium text-gray-600">Link Drive / resurse</label>
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    className="input flex-1 text-sm"
+                    placeholder="https://drive.google.com/..."
+                    value={editUrl}
+                    onChange={e => { setEditUrl(e.target.value); setUrlError(null) }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') { e.preventDefault(); handleSaveUrl(item) }
+                      if (e.key === 'Escape') cancelEditUrl()
+                    }}
+                    autoFocus
+                  />
+                  <button
+                    onClick={() => handleSaveUrl(item)}
+                    disabled={savingUrl}
+                    className="btn-primary text-sm flex-shrink-0 disabled:opacity-40"
+                  >
+                    {savingUrl ? 'Se salvează...' : 'Salvează'}
+                  </button>
+                </div>
+                {urlError && <p className="text-xs text-red-600">{urlError}</p>}
+                {editUrl.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => { setEditUrl(''); setUrlError(null) }}
+                    className="text-xs text-gray-400 hover:text-red-500"
+                  >
+                    Șterge link-ul
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>

@@ -22,6 +22,7 @@ export default async function ResursePage() {
   const phase           = getPhaseFromWeek(profile.week)
   const config          = PHASE_RECIPE_CONFIGS[phase]
   const activeProtocols = profile.protocols ?? []
+  const isAdmin = profile.role === 'admin'
 
   const { data: protocolTypes } = await supabase
     .from('protocol_types')
@@ -155,23 +156,29 @@ export default async function ResursePage() {
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Protocoalele tale personalizate</h2>
             <div className="grid md:grid-cols-2 gap-4">
               {activeProtocols.map(name => {
-                const url = ptMap.get(name)
-                const inner = (
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="badge bg-green-100 text-green-800 mb-2 inline-block">{name}</span>
+                const url = ptMap.get(name) ?? null
+                return (
+                  <div key={name} className="card flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <span className="badge bg-green-100 text-green-800 mb-1.5 inline-block">{name}</span>
                       <p className="text-sm text-gray-500">Protocol personalizat activ</p>
+                      {!url && isAdmin && (
+                        <p className="text-xs text-amber-600 mt-1">⚠ Fără link configurat</p>
+                      )}
                     </div>
-                    {url && <span className="text-brand-600 group-hover:translate-x-1 transition-transform text-lg">→</span>}
+                    {url ? (
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-primary text-sm flex-shrink-0 whitespace-nowrap"
+                      >
+                        Deschide resurse →
+                      </a>
+                    ) : (
+                      <span className="text-xs text-gray-400 flex-shrink-0 mt-1">Resurse indisponibile</span>
+                    )}
                   </div>
-                )
-                return url ? (
-                  <a key={name} href={url} target="_blank" rel="noopener noreferrer"
-                     className="card hover:shadow-md transition-shadow group">
-                    {inner}
-                  </a>
-                ) : (
-                  <div key={name} className="card">{inner}</div>
                 )
               })}
             </div>
