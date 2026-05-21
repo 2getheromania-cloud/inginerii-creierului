@@ -7,11 +7,8 @@ import {
   PHASE_RECIPE_CONFIGS,
   PHASE_COLORS,
   PROGRAM_PHASES,
-  PROTOCOL_LABELS,
-  PROTOCOL_LINKS,
   GENERAL_MATERIALS,
 } from '@/lib/program'
-import type { ProtocolFlags } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 export default async function ResursePage() {
@@ -22,11 +19,16 @@ export default async function ResursePage() {
   const profile = await getOrCreateProfile(user.id, user.email!)
   if (!profile) redirect('/')
 
-  const phase   = getPhaseFromWeek(profile.week)
-  const config  = PHASE_RECIPE_CONFIGS[phase]
-  const activeFlags = Object.entries(profile.flags as ProtocolFlags)
-    .filter(([, v]) => v)
-    .map(([k]) => k as keyof ProtocolFlags)
+  const phase           = getPhaseFromWeek(profile.week)
+  const config          = PHASE_RECIPE_CONFIGS[phase]
+  const activeProtocols = profile.protocols ?? []
+
+  const { data: protocolTypes } = await supabase
+    .from('protocol_types')
+    .select('name, drive_url')
+    .eq('is_active', true)
+
+  const ptMap = new Map((protocolTypes ?? []).map(p => [p.name, p.drive_url as string | null]))
 
   return (
     <AppShell profile={profile}>
@@ -148,29 +150,30 @@ export default async function ResursePage() {
         </div>
 
         {/* ── Protocoale personalizate active ── */}
-        {activeFlags.length > 0 && (
+        {activeProtocols.length > 0 && (
           <div>
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Protocoalele tale personalizate</h2>
             <div className="grid md:grid-cols-2 gap-4">
-              {activeFlags.map(flag => (
-                <a
-                  key={flag}
-                  href={PROTOCOL_LINKS[flag]}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="card hover:shadow-md transition-shadow group"
-                >
+              {activeProtocols.map(name => {
+                const url = ptMap.get(name)
+                const inner = (
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="badge bg-amber-100 text-amber-800 mb-2 inline-block">
-                        {PROTOCOL_LABELS[flag]}
-                      </span>
+                      <span className="badge bg-green-100 text-green-800 mb-2 inline-block">{name}</span>
                       <p className="text-sm text-gray-500">Protocol personalizat activ</p>
                     </div>
-                    <span className="text-brand-600 group-hover:translate-x-1 transition-transform text-lg">→</span>
+                    {url && <span className="text-brand-600 group-hover:translate-x-1 transition-transform text-lg">→</span>}
                   </div>
-                </a>
-              ))}
+                )
+                return url ? (
+                  <a key={name} href={url} target="_blank" rel="noopener noreferrer"
+                     className="card hover:shadow-md transition-shadow group">
+                    {inner}
+                  </a>
+                ) : (
+                  <div key={name} className="card">{inner}</div>
+                )
+              })}
             </div>
           </div>
         )}

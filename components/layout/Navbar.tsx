@@ -25,6 +25,7 @@ const ADMIN_NAV = [
   { href: '/documente',          label: 'Documente' },
   { href: '/admin/notificari',   label: 'Notificări' },
   { href: '/admin/rapoarte',     label: 'Rapoarte' },
+  { href: '/admin/setari',       label: 'Setări' },
 ]
 
 interface ToastItem {

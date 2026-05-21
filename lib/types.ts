@@ -14,6 +14,15 @@ export interface Profile {
   allow_backfill?: boolean
   community_last_seen_at?: string | null
   onboarding_completed?: boolean | null
+  protocols?: string[] | null
+}
+
+export interface ProtocolType {
+  id: string
+  name: string
+  drive_url: string | null
+  sort_order: number
+  is_active: boolean
 }
 
 export interface ProtocolFlags {

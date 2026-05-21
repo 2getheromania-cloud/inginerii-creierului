@@ -2,16 +2,16 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { PROTOCOL_LABELS } from '@/lib/program'
 import { todayISO } from '@/lib/utils'
-import type { Profile, ProtocolFlags } from '@/lib/types'
+import type { Profile } from '@/lib/types'
+import ProtocolMultiSelect from './ProtocolMultiSelect'
 
 export default function AdminCursantClient({ profile }: { profile: Profile }) {
-  const [name,           setName]           = useState(profile.name ?? '')
-  const [week,           setWeek]           = useState(profile.week)
-  const [flags,          setFlags]          = useState<ProtocolFlags>({ ...profile.flags })
-  const [appStartDate,   setAppStartDate]   = useState(profile.app_start_date ?? '')
-  const [allowBackfill,  setAllowBackfill]  = useState(profile.allow_backfill ?? false)
+  const [name,          setName]          = useState(profile.name ?? '')
+  const [week,          setWeek]          = useState(profile.week)
+  const [protocols,     setProtocols]     = useState<string[]>(profile.protocols ?? [])
+  const [appStartDate,  setAppStartDate]  = useState(profile.app_start_date ?? '')
+  const [allowBackfill, setAllowBackfill] = useState(profile.allow_backfill ?? false)
   const [saving,  setSaving]  = useState(false)
   const [saved,   setSaved]   = useState(false)
   const [error,   setError]   = useState('')
@@ -27,7 +27,7 @@ export default function AdminCursantClient({ profile }: { profile: Profile }) {
       .update({
         name: name.trim(),
         week,
-        flags,
+        protocols,
         app_start_date: appStartDate || null,
         allow_backfill: allowBackfill,
       })
@@ -95,20 +95,12 @@ export default function AdminCursantClient({ profile }: { profile: Profile }) {
         {/* Protocols */}
         <div>
           <label className="label">Protocoale personalizate</label>
-          <div className="grid grid-cols-2 gap-2 mt-1">
-            {(Object.keys(flags) as (keyof ProtocolFlags)[]).map(key => (
-              <label key={key} className={`flex items-center gap-2 p-3 rounded-xl border cursor-pointer transition-colors ${
-                flags[key] ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-200 hover:bg-gray-50'
-              }`}>
-                <input
-                  type="checkbox"
-                  checked={flags[key]}
-                  onChange={() => { setFlags(prev => ({ ...prev, [key]: !prev[key] })); setSaved(false) }}
-                  className="w-4 h-4 accent-amber-600"
-                />
-                <span className="text-sm font-medium text-gray-700">{PROTOCOL_LABELS[key]}</span>
-              </label>
-            ))}
+          <div className="mt-1">
+            <ProtocolMultiSelect
+              value={protocols}
+              onChange={v => { setProtocols(v); setSaved(false) }}
+              disabled={saving}
+            />
           </div>
         </div>
 

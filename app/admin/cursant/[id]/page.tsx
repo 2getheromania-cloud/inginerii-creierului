@@ -12,12 +12,10 @@ import { formatDate } from '@/lib/utils'
 import {
   getPhaseFromWeek,
   PHASE_COLORS,
-  PROTOCOL_LABELS,
-  PROTOCOL_LINKS,
   PHASE_RECIPE_CONFIGS,
   GENERAL_MATERIALS,
 } from '@/lib/program'
-import type { Profile, DailyReport, ProtocolFlags } from '@/lib/types'
+import type { Profile, DailyReport } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { getOrCreateConversation } from '@/lib/conversations'
@@ -40,21 +38,21 @@ export default async function AdminCursantPage({ params }: { params: { id: strin
   const { data: cursantProfile } = await supabase.from('profiles').select('*').eq('id', params.id).single()
   if (!cursantProfile) notFound()
 
-  const [{ data: reports30 }, { data: reports7 }] = await Promise.all([
+  const [{ data: reports30 }, { data: reports7 }, { data: protocolTypes }] = await Promise.all([
     supabase.from('daily_reports').select('*').eq('user_id', params.id).order('date', { ascending: false }).limit(30),
     supabase.from('daily_reports').select('*').eq('user_id', params.id).order('date', { ascending: false }).limit(7),
+    supabase.from('protocol_types').select('id, name, drive_url').eq('is_active', true),
   ])
 
   const conversationId = await getOrCreateConversation(params.id, user.id)
 
-  const phase        = getPhaseFromWeek(cursantProfile.week)
-  const flags        = cursantProfile.flags as ProtocolFlags
-  const activeFlags  = Object.entries(flags).filter(([, v]) => v).map(([k]) => k as keyof ProtocolFlags)
-  const recipeConfig = PHASE_RECIPE_CONFIGS[phase]
+  const phase           = getPhaseFromWeek(cursantProfile.week)
+  const activeProtocols = (cursantProfile.protocols as string[] | null) ?? []
+  const recipeConfig    = PHASE_RECIPE_CONFIGS[phase]
+  const ptMap           = new Map((protocolTypes ?? []).map(p => [p.name, p.drive_url as string | null]))
 
   const generalLinks = GENERAL_MATERIALS.filter(m =>
-    (GENERAL_KEYS as readonly string[]).includes(m.title) ||
-    (flags.tiroida && m.title === 'Suplimente Tiroidă')
+    (GENERAL_KEYS as readonly string[]).includes(m.title)
   )
 
   const userName = cursantProfile.name ?? cursantProfile.email
@@ -96,13 +94,21 @@ export default async function AdminCursantPage({ params }: { params: { id: strin
         </div>
 
         {/* ── Protocoale active ── */}
-        {activeFlags.length > 0 && (
+        {activeProtocols.length > 0 && (
           <div className="card">
             <h3 className="font-semibold mb-3">Protocoale active</h3>
             <div className="flex flex-wrap gap-2">
-              {activeFlags.map(f => (
-                <span key={f} className="badge bg-amber-100 text-amber-800">{PROTOCOL_LABELS[f]}</span>
-              ))}
+              {activeProtocols.map(name => {
+                const url = ptMap.get(name)
+                return url ? (
+                  <a key={name} href={url} target="_blank" rel="noopener noreferrer"
+                     className="badge bg-green-100 text-green-800 hover:bg-green-200 transition-colors">
+                    {name} →
+                  </a>
+                ) : (
+                  <span key={name} className="badge bg-green-100 text-green-800">{name}</span>
+                )
+              })}
             </div>
           </div>
         )}
@@ -194,20 +200,24 @@ export default async function AdminCursantPage({ params }: { params: { id: strin
           </div>
 
           {/* Protocoale active cu linkuri */}
-          {activeFlags.length > 0 && (
+          {activeProtocols.length > 0 && (
             <div className="mb-5">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Protocoale active</p>
               <div className="flex flex-wrap gap-2">
-                {activeFlags.map(f => (
-                  <a
-                    key={f}
-                    href={PROTOCOL_LINKS[f]}
-                    target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 hover:border-amber-300 transition-colors text-sm font-medium"
-                  >
-                    ⚡ {PROTOCOL_LABELS[f]} →
-                  </a>
-                ))}
+                {activeProtocols.map(name => {
+                  const url = ptMap.get(name)
+                  return url ? (
+                    <a key={name} href={url} target="_blank" rel="noopener noreferrer"
+                       className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-green-50 border border-green-200 text-green-700 hover:bg-green-100 hover:border-green-300 transition-colors text-sm font-medium">
+                      ⚡ {name} →
+                    </a>
+                  ) : (
+                    <span key={name}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-green-50 border border-green-200 text-green-700 text-sm font-medium">
+                      ⚡ {name}
+                    </span>
+                  )
+                })}
               </div>
             </div>
           )}
