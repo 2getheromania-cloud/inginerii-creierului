@@ -5,10 +5,10 @@ import type { PrivateMessage } from '@/lib/types'
 
 interface Props {
   conversationId: string
-  adminId: string
+  currentUserId: string
 }
 
-export default function AdminPrivateChatClient({ conversationId, adminId }: Props) {
+export default function AdminPrivateChatClient({ conversationId, currentUserId }: Props) {
   const [messages, setMessages] = useState<PrivateMessage[]>([])
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
@@ -71,7 +71,7 @@ export default function AdminPrivateChatClient({ conversationId, adminId }: Prop
           <p className="text-center text-gray-400 text-sm py-8">Niciun mesaj încă.</p>
         )}
         {messages.map(msg => {
-          const isOwn = msg.sender_id === adminId
+          const isOwn = msg.sender_id === currentUserId
           const time = new Date(msg.created_at).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })
           return (
             <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>

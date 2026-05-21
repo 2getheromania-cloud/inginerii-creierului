@@ -56,7 +56,7 @@ export default function AdminConversatiiClient({ conversations, adminId }: Props
             <AdminPrivateChatClient
               key={selected.id}
               conversationId={selected.id}
-              adminId={adminId}
+              currentUserId={adminId}
             />
           </>
         ) : (

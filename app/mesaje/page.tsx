@@ -3,9 +3,7 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { getOrCreateProfile } from '@/lib/supabase/profile'
 import { redirect } from 'next/navigation'
 import AppShell from '@/components/layout/AppShell'
-import MesajeClient from '@/components/mesaje/MesajeClient'
-import AdminConversatiiClient from '@/components/mesaje/AdminConversatiiClient'
-import { getOrCreateConversation } from '@/lib/conversations'
+import ConversatiiClient from '@/components/mesaje/ConversatiiClient'
 
 function service() {
   return createSupabaseClient(
@@ -22,47 +20,37 @@ export default async function MesajePage() {
   const profile = await getOrCreateProfile(user.id, user.email!)
   if (!profile) redirect('/')
 
-  if (profile.role === 'admin') {
-    const { data: convRows } = await service()
-      .from('conversations')
-      .select('id, user_id, created_at, profiles!user_id(id, name, email)')
-      .order('created_at', { ascending: false })
+  const isAdmin = profile.role === 'admin'
 
-    const conversations = (convRows ?? []).map((c: {
-      id: string
-      user_id: string
-      created_at: string
-      profiles: { id: string; name: string | null; email: string }[] | { id: string; name: string | null; email: string } | null
-    }) => {
-      const p = Array.isArray(c.profiles) ? c.profiles[0] : c.profiles
-      return {
-        id: c.id,
-        userId: c.user_id,
-        name: p?.name ?? p?.email ?? c.user_id,
-        email: p?.email ?? '',
-      }
-    })
+  // Admin sees everyone except self; cursant sees only admins
+  let query = service()
+    .from('profiles')
+    .select('id, name, email, role')
+    .neq('id', user.id)
+    .order('name')
 
-    return (
-      <AppShell profile={profile}>
-        <div className="space-y-4">
-          <h1 className="text-2xl font-bold text-gray-900">Mesaje private</h1>
-          <AdminConversatiiClient conversations={conversations} adminId={user.id} />
-        </div>
-      </AppShell>
-    )
+  if (!isAdmin) {
+    query = query.eq('role', 'admin') as typeof query
   }
 
-  const conversationId = await getOrCreateConversation(user.id)
+  const { data: users } = await query
+
+  const userList = (users ?? []).map((u: { id: string; name: string | null; email: string; role: string }) => ({
+    id: u.id,
+    name: u.name ?? u.email,
+    email: u.email,
+    role: u.role as 'admin' | 'cursant',
+  }))
 
   return (
     <AppShell profile={profile}>
-      <div className="flex flex-col h-[calc(100vh-4rem)] -mt-6 -mx-4">
-        <div className="px-4 pt-6 pb-3 border-b border-gray-100 bg-white">
-          <h1 className="text-xl font-bold text-gray-900">Mesaje cu echipa</h1>
-          <p className="text-sm text-gray-500">Conversație privată cu adminul programului.</p>
-        </div>
-        <MesajeClient conversationId={conversationId} userId={user.id} userName={profile.name || profile.email} />
+      <div className="space-y-4">
+        <h1 className="text-2xl font-bold text-gray-900">Mesaje private</h1>
+        <ConversatiiClient
+          users={userList}
+          currentUserId={user.id}
+          currentUserRole={profile.role}
+        />
       </div>
     </AppShell>
   )

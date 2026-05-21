@@ -44,7 +44,7 @@ export default async function AdminCursantPage({ params }: { params: { id: strin
     supabase.from('daily_reports').select('*').eq('user_id', params.id).order('date', { ascending: false }).limit(7),
   ])
 
-  const conversationId = await getOrCreateConversation(params.id)
+  const conversationId = await getOrCreateConversation(params.id, user.id)
 
   const phase        = getPhaseFromWeek(cursantProfile.week)
   const flags        = cursantProfile.flags as ProtocolFlags
@@ -84,7 +84,7 @@ export default async function AdminCursantPage({ params }: { params: { id: strin
         <div className="card">
           <h3 className="font-semibold mb-4">Chat privat cu {userName}</h3>
           <div className="h-80 flex flex-col border border-gray-200 rounded-xl overflow-hidden">
-            <AdminPrivateChatClient conversationId={conversationId} adminId={user.id} />
+            <AdminPrivateChatClient conversationId={conversationId} currentUserId={user.id} />
           </div>
         </div>
 
