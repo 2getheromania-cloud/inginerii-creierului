@@ -93,13 +93,13 @@ function MessageBubble({
                 }}
               >
                 <p style={{
-                  fontSize: 11, fontWeight: 600, marginBottom: 2, lineHeight: 1.3,
+                  fontSize: 13, fontWeight: 600, marginBottom: 2, lineHeight: 1.3,
                   color: isOwn ? 'rgba(255,255,255,0.9)' : '#16a34a',
                 }}>
                   Răspuns la
                 </p>
                 <p style={{
-                  fontSize: 11, lineHeight: 1.35, margin: 0,
+                  fontSize: 13, lineHeight: 1.35, margin: 0,
                   overflow: 'hidden', display: '-webkit-box',
                   WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
                   color: isOwn ? 'rgba(255,255,255,0.65)' : '#6b7280',
@@ -108,8 +108,8 @@ function MessageBubble({
                 </p>
               </button>
             )}
-            <p className="text-[15px] md:text-sm whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
-            <p className={`text-[11px] mt-1 text-right ${isOwn ? 'text-brand-200' : 'text-gray-400'}`} suppressHydrationWarning>
+            <p className="text-[17px] md:text-base whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
+            <p className={`text-xs mt-1 text-right ${isOwn ? 'text-brand-200' : 'text-gray-400'}`} suppressHydrationWarning>
               {time}{msg.edited_at ? ' · editat' : ''}
             </p>
           </div>
@@ -133,16 +133,16 @@ function MessageBubble({
         {!isOptimistic && (
           <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap', justifyContent: isOwn ? 'flex-end' : 'flex-start' }}>
             <button type="button" onClick={() => setShowPicker(p => !p)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '4px 10px', borderRadius: 20, background: '#f3f4f6', color: '#374151', fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer' }}>
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 20, background: '#f3f4f6', color: '#374151', fontSize: 15, fontWeight: 500, border: 'none', cursor: 'pointer' }}>
               <span>😊</span><span>Reacție</span>
             </button>
             <button type="button" onClick={() => onReply(msg)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '4px 10px', borderRadius: 20, background: '#f3f4f6', color: '#374151', fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer' }}>
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 20, background: '#f3f4f6', color: '#374151', fontSize: 15, fontWeight: 500, border: 'none', cursor: 'pointer' }}>
               <span>↩️</span><span>Răspunde</span>
             </button>
             {isOwn && !isEditing && (
               <button type="button" onClick={() => { setIsEditing(true); setDraft(msg.content) }}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '4px 10px', borderRadius: 20, background: '#f3f4f6', color: '#374151', fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer' }}>
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 20, background: '#f3f4f6', color: '#374151', fontSize: 15, fontWeight: 500, border: 'none', cursor: 'pointer' }}>
                 <span>✏️</span><span>Editează</span>
               </button>
             )}
@@ -359,7 +359,7 @@ export default function MesajeClient({ conversationId, userId }: Props) {
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(e as unknown as React.FormEvent) } }}
           placeholder="Scrie un mesaj..."
           rows={1}
-          className="flex-1 resize-none rounded-2xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+          className="flex-1 resize-none rounded-2xl border border-gray-200 px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-400"
           style={{ minHeight: '40px', maxHeight: '96px' }}
         />
         <button type="submit" disabled={!text.trim() || sending}

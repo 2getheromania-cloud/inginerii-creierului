@@ -31,12 +31,12 @@ function groupReactions(reactions: ChatReaction[], currentUserId: string) {
 const pillStyle: React.CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
-  gap: '3px',
-  padding: '4px 10px',
+  gap: '4px',
+  padding: '5px 12px',
   borderRadius: '20px',
   background: '#f3f4f6',
   color: '#374151',
-  fontSize: '13px',
+  fontSize: '15px',
   fontWeight: 500,
   border: 'none',
   cursor: 'pointer',
@@ -116,14 +116,14 @@ export default function ChatMessageBubble({
     return (
       <div className="w-full px-4 py-1">
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
-          <p className="text-xs text-amber-600 font-semibold mb-1">📣 Anunț de la echipă</p>
-          {body && <p className="text-sm text-gray-800 whitespace-pre-wrap break-words">{linkifyText(body)}</p>}
+          <p className="text-sm text-amber-600 font-semibold mb-1">📣 Anunț de la echipă</p>
+          {body && <p className="text-base text-gray-800 whitespace-pre-wrap break-words leading-relaxed">{linkifyText(body)}</p>}
           {image_url && (
             <a href={image_url} target="_blank" rel="noopener noreferrer">
               <img src={image_url} alt="imagine" className="mt-2 max-h-60 rounded-lg mx-auto cursor-pointer" loading="lazy" />
             </a>
           )}
-          <p className="text-xs text-gray-400 mt-1" suppressHydrationWarning>{time} · {sender.name || sender.email}</p>
+          <p className="text-sm text-gray-400 mt-1" suppressHydrationWarning>{time} · {sender.name || sender.email}</p>
         </div>
         {isAdmin && (
           <div style={{ display: 'flex', justifyContent: 'center', marginTop: 4 }}>
@@ -141,7 +141,7 @@ export default function ChatMessageBubble({
       <div className={`flex flex-col max-w-[82%] ${isOwn ? 'items-end' : 'items-start'}`}>
 
         {!isOwn && (
-          <span className={`text-xs font-semibold px-1 mb-0.5 ${isAdminSender ? 'text-amber-700' : 'text-brand-700'}`}>
+          <span className={`text-sm font-semibold px-1 mb-0.5 ${isAdminSender ? 'text-amber-700' : 'text-brand-700'}`}>
             {sender.name || sender.email}
           </span>
         )}
@@ -192,7 +192,7 @@ export default function ChatMessageBubble({
               >
                 {replyAuthor && (
                   <p style={{
-                    fontSize: 11, fontWeight: 600, marginBottom: 2, lineHeight: 1.3,
+                    fontSize: 13, fontWeight: 600, marginBottom: 2, lineHeight: 1.3,
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     color: isOwn ? 'rgba(255,255,255,0.9)' : '#16a34a',
                   }}>
@@ -200,7 +200,7 @@ export default function ChatMessageBubble({
                   </p>
                 )}
                 <p style={{
-                  fontSize: 11, lineHeight: 1.35, margin: 0,
+                  fontSize: 13, lineHeight: 1.35, margin: 0,
                   overflow: 'hidden', display: '-webkit-box',
                   WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
                   color: isOwn ? 'rgba(255,255,255,0.65)' : '#6b7280',
@@ -213,7 +213,7 @@ export default function ChatMessageBubble({
               <span className={`text-xs block mb-1 ${isOwn ? 'text-brand-200' : 'text-gray-400'}`}>📌 fixat</span>
             )}
             {body && (
-              <p className="text-sm whitespace-pre-wrap break-words">
+              <p className="text-base whitespace-pre-wrap break-words leading-relaxed">
                 {linkifyText(body, isOwn
                   ? 'underline break-all opacity-80 hover:opacity-100 text-white'
                   : 'underline break-all opacity-80 hover:opacity-100')}
@@ -224,7 +224,7 @@ export default function ChatMessageBubble({
                 <img src={image_url} alt="imagine" className="mt-1 max-h-60 max-w-full rounded-lg cursor-pointer" loading="lazy" />
               </a>
             )}
-            <span className={`text-[10px] block text-right mt-1 ${isOwn ? 'text-brand-200' : 'text-gray-400'}`} suppressHydrationWarning>
+            <span className={`text-xs block text-right mt-1 ${isOwn ? 'text-brand-200' : 'text-gray-400'}`} suppressHydrationWarning>
               {time}{edited_at ? ' · editat' : ''}
             </span>
           </div>
