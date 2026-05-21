@@ -72,7 +72,7 @@ export default function LoginForm() {
 
   // ── Verify OTP ────────────────────────────────────────────────────────────
   async function verifyOTP() {
-    if (otp.length !== 6) return
+    if (otp.length < 6) return
     setVerifying(true)
     setError('')
 
@@ -146,14 +146,15 @@ export default function LoginForm() {
               type="text"
               inputMode="numeric"
               pattern="[0-9]*"
-              maxLength={6}
+              maxLength={8}
               autoFocus
               autoComplete="one-time-code"
-              placeholder="000000"
+              placeholder="··· ···"
               value={otp}
               onChange={e => {
                 setError('')
-                setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))
+                // strip non-digits; maxLength handles the upper bound
+                setOtp(e.target.value.replace(/\D/g, ''))
               }}
               onKeyDown={e => { if (e.key === 'Enter') verifyOTP() }}
               className="input text-center text-2xl tracking-[0.5em] font-bold placeholder:tracking-normal"
@@ -174,7 +175,7 @@ export default function LoginForm() {
 
           <button
             onClick={verifyOTP}
-            disabled={otp.length !== 6 || verifying}
+            disabled={otp.length < 6 || verifying}
             className="btn-primary w-full disabled:opacity-60"
           >
             {verifying ? 'Se verifică...' : 'Autentifică-mă'}
