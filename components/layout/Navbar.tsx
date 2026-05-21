@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import type { Profile } from '@/lib/types'
@@ -30,6 +31,13 @@ export default function Navbar({ profile }: { profile: Profile }) {
   const supabase = createClient()
   const isAdmin = profile.role === 'admin'
   const nav = isAdmin ? ADMIN_NAV : CURSANT_NAV
+
+  useEffect(() => {
+    const ping = () => fetch('/api/presence', { method: 'PUT' }).catch(() => {})
+    ping()
+    const id = setInterval(ping, 30_000)
+    return () => clearInterval(id)
+  }, [])
 
   async function signOut() {
     await supabase.auth.signOut()

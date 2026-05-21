@@ -20,7 +20,12 @@ export default function AdminPrivateChatClient({ conversationId, currentUserId }
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
   }
 
+  function markRead() {
+    fetch(`/api/conversations/${conversationId}/messages`, { method: 'PATCH' }).catch(() => {})
+  }
+
   useEffect(() => {
+    markRead()
     fetch(`/api/conversations/${conversationId}/messages`)
       .then(r => r.json())
       .then((data: PrivateMessage[]) => {
@@ -38,6 +43,7 @@ export default function AdminPrivateChatClient({ conversationId, currentUserId }
       }, payload => {
         setMessages(prev => [...prev, payload.new as PrivateMessage])
         setTimeout(scrollToBottom, 50)
+        markRead()
       })
       .subscribe()
 

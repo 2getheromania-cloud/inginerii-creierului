@@ -6,26 +6,56 @@ function service() {
   return supa(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 }
 
+async function getConvAndCheck(convId: string, userId: string) {
+  const { data: conv } = await service()
+    .from('conversations')
+    .select('user_id, participant_a_id, participant_b_id')
+    .eq('id', convId)
+    .single()
+  if (!conv) return null
+  const { data: profile } = await service().from('profiles').select('role').eq('id', userId).single()
+  const isAdmin = profile?.role === 'admin'
+  const isParticipant =
+    conv.user_id === userId || conv.participant_a_id === userId || conv.participant_b_id === userId
+  if (!isParticipant && !isAdmin) return null
+  return { conv, isAdmin }
+}
+
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const authClient = createClient()
   const { data: { user } } = await authClient.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: conv } = await service().from('conversations').select('user_id, participant_a_id, participant_b_id').eq('id', params.id).single()
-  if (!conv) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  const { data: profile } = await service().from('profiles').select('role').eq('id', user.id).single()
-  const isAdmin = profile?.role === 'admin'
-  const isParticipant = conv.user_id === user.id || conv.participant_a_id === user.id || conv.participant_b_id === user.id
-  if (!isParticipant && !isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const checked = await getConvAndCheck(params.id, user.id)
+  if (!checked) return NextResponse.json({ error: 'Not found or forbidden' }, { status: 403 })
 
   const { data } = await service()
     .from('private_messages')
     .select('*')
     .eq('conversation_id', params.id)
     .order('created_at', { ascending: true })
-    .limit(100)
+    .limit(200)
 
   return NextResponse.json(data ?? [])
+}
+
+// Mark all messages in this conversation as read (for the current user)
+export async function PATCH(_req: NextRequest, { params }: { params: { id: string } }) {
+  const authClient = createClient()
+  const { data: { user } } = await authClient.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const checked = await getConvAndCheck(params.id, user.id)
+  if (!checked) return NextResponse.json({ error: 'Not found or forbidden' }, { status: 403 })
+
+  await service()
+    .from('private_messages')
+    .update({ read: true })
+    .eq('conversation_id', params.id)
+    .eq('read', false)
+    .neq('sender_id', user.id)
+
+  return NextResponse.json({ ok: true })
 }
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -36,12 +66,22 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const { content } = await req.json() as { content: string }
   if (!content?.trim()) return NextResponse.json({ error: 'Mesaj gol' }, { status: 400 })
 
-  const { data: conv } = await service().from('conversations').select('user_id, participant_a_id, participant_b_id').eq('id', params.id).single()
+  const { data: conv } = await service()
+    .from('conversations')
+    .select('user_id, participant_a_id, participant_b_id')
+    .eq('id', params.id)
+    .single()
   if (!conv) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  const { data: senderProfile } = await service().from('profiles').select('role, name, email').eq('id', user.id).single()
+
+  const { data: senderProfile } = await service()
+    .from('profiles')
+    .select('role, name, email')
+    .eq('id', user.id)
+    .single()
   const isAdmin = senderProfile?.role === 'admin'
-  const isParticipantPost = conv.user_id === user.id || conv.participant_a_id === user.id || conv.participant_b_id === user.id
-  if (!isParticipantPost && !isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const isParticipant =
+    conv.user_id === user.id || conv.participant_a_id === user.id || conv.participant_b_id === user.id
+  if (!isParticipant && !isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { data: msg, error } = await service()
     .from('private_messages')
@@ -51,24 +91,35 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  try {
-    const { sendPrivateChatNotification } = await import('@/lib/email/resend')
-    const senderName = senderProfile?.name ?? senderProfile?.email ?? 'Utilizator'
-    if (conv.participant_a_id && conv.participant_b_id) {
-      const recipientId = conv.participant_a_id === user.id ? conv.participant_b_id : conv.participant_a_id
-      const { data: recipient } = await service().from('profiles').select('email, name').eq('id', recipientId).single()
-      if (recipient) await sendPrivateChatNotification(recipient.email, recipient.name, senderName, content.trim(), !isAdmin)
-    } else if (isAdmin) {
-      const cursantId = conv.user_id ?? conv.participant_a_id
-      const { data: cursantProfile } = await service().from('profiles').select('email, name').eq('id', cursantId).single()
-      if (cursantProfile) await sendPrivateChatNotification(cursantProfile.email, cursantProfile.name, senderName, content.trim(), false)
-    } else {
-      const { data: admins } = await service().from('profiles').select('email, name').eq('role', 'admin')
-      for (const admin of admins ?? []) {
-        await sendPrivateChatNotification(admin.email, admin.name, senderName, content.trim(), true)
+  // Smart delayed notification — fire and forget
+  ;(async () => {
+    try {
+      const { maybeNotifyPrivateMessage } = await import('@/lib/notifications')
+      const senderName = senderProfile?.name ?? senderProfile?.email ?? 'Utilizator'
+      const text = content.trim()
+
+      if (conv.participant_a_id && conv.participant_b_id) {
+        // New-style: notify the other participant
+        const recipientId = conv.participant_a_id === user.id
+          ? conv.participant_b_id
+          : conv.participant_a_id
+        await maybeNotifyPrivateMessage(params.id, recipientId, senderName, text)
+      } else if (isAdmin) {
+        // Old-style admin → cursant
+        const cursantId = conv.user_id ?? conv.participant_a_id
+        if (cursantId) await maybeNotifyPrivateMessage(params.id, cursantId, senderName, text)
+      } else {
+        // Old-style cursant → all admins
+        const { data: admins } = await service()
+          .from('profiles')
+          .select('id')
+          .eq('role', 'admin')
+        for (const admin of admins ?? []) {
+          await maybeNotifyPrivateMessage(params.id, admin.id, senderName, text)
+        }
       }
-    }
-  } catch {}
+    } catch {}
+  })()
 
   return NextResponse.json(msg)
 }

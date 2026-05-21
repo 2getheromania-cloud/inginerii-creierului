@@ -99,23 +99,25 @@ export async function sendPrivateChatNotification(
   toName: string | null,
   fromName: string,
   preview: string,
-  isFromCursant: boolean
 ) {
+  const short = preview.slice(0, 120) + (preview.length > 120 ? '...' : '')
   return client().emails.send({
     from: FROM,
     to: toEmail,
-    subject: `💬 Mesaj nou de la ${fromName}`,
+    subject: 'Ai un mesaj nou în Inginerii Creierului',
     html: `
       <div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;padding:32px">
-        <h2 style="color:#166534">Mesaj nou</h2>
-        <p>Salut, ${toName || (isFromCursant ? 'Admin' : 'cursant')}!</p>
-        <p><strong>${fromName}</strong> ți-a trimis un mesaj:</p>
-        <blockquote style="border-left:3px solid #16a34a;padding-left:12px;color:#374151;font-style:italic">
-          "${preview.slice(0, 200)}${preview.length > 200 ? '...' : ''}"
+        <h2 style="color:#166534">Mesaj nou de la ${fromName}</h2>
+        <p>Salut, ${toName || 'utilizator'}!</p>
+        <blockquote style="border-left:3px solid #16a34a;padding-left:12px;color:#374151;font-style:italic;margin:16px 0">
+          "${short}"
         </blockquote>
-        <a href="${appUrl()}/${isFromCursant ? 'admin' : 'mesaje'}" style="display:inline-block;background:#16a34a;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin:16px 0">
-          Răspunde
+        <a href="${appUrl()}/mesaje" style="display:inline-block;background:#16a34a;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin:16px 0">
+          Deschide conversația
         </a>
+        <p style="color:#9ca3af;font-size:12px;margin-top:24px">
+          Primești acest email deoarece ai un mesaj necitit în Inginerii Creierului.
+        </p>
       </div>`,
   })
 }
