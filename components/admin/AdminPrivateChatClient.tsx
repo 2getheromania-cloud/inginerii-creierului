@@ -240,7 +240,11 @@ export default function AdminPrivateChatClient({ conversationId, currentUserId }
         if (!r.ok) return
         const data: PrivateMessage[] = await r.json()
         setMessages(prev => {
-          const byId = new Map(data.map(m => [m.id, m]))
+          const prevMap = new Map(prev.map(m => [m.id, m]))
+          const byId = new Map<string, PrivateMessage>(data.map(m => [m.id, {
+            ...m,
+            reactions: prevMap.get(m.id)?.reactions ?? m.reactions ?? [],
+          } as PrivateMessage]))
           for (const m of prev) if (!byId.has(m.id)) byId.set(m.id, m)
           return Array.from(byId.values()).sort((a, b) => a.created_at < b.created_at ? -1 : 1)
         })
@@ -284,18 +288,20 @@ export default function AdminPrivateChatClient({ conversationId, currentUserId }
     el.style.height = Math.min(el.scrollHeight, 120) + 'px'
   }
 
-  const handleReact = useCallback((msgId: string, emoji: string) => {
-    setMessages(prev => prev.map(m => {
+  const handleReact = useCallback(async (msgId: string, emoji: string) => {
+    const applyToggle = (msgs: PrivateMessage[]) => msgs.map(m => {
       if (m.id !== msgId) return m
       const reactions = m.reactions ?? []
       const idx = reactions.findIndex(r => r.emoji === emoji && r.user_id === currentUserId)
       return { ...m, reactions: idx >= 0 ? reactions.filter((_, i) => i !== idx) : [...reactions, { emoji, user_id: currentUserId }] }
-    }))
-    fetch('/api/private-reactions', {
+    })
+    setMessages(prev => applyToggle(prev))
+    const res = await fetch('/api/private-reactions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message_id: msgId, emoji }),
-    }).catch(() => {})
+    }).catch(() => null)
+    if (!res || !res.ok) setMessages(prev => applyToggle(prev))
   }, [currentUserId])
 
   const handleDelete = useCallback(async (msgId: string) => {
