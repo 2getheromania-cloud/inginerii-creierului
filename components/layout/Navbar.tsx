@@ -109,6 +109,7 @@ export default function Navbar({ profile }: { profile: Profile }) {
   const [toasts, setToasts]                   = useState<ToastItem[]>([])
   const [notifPerm, setNotifPerm]             = useState<NotificationPermission | null>(null)
   const [needsPushSub, setNeedsPushSub]       = useState(false)
+  const [pushError, setPushError]             = useState<string | null>(null)
 
   useEffect(() => {
     if (typeof Notification !== 'undefined') setNotifPerm(Notification.permission)
@@ -227,27 +228,43 @@ export default function Navbar({ profile }: { profile: Profile }) {
   }, [unreadPrivate, unreadCommunity])
 
   async function subscribePush(reg: ServiceWorkerRegistration) {
-    try {
-      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-      if (!vapidKey) return
-      const existing = await reg.pushManager.getSubscription()
-      const sub = existing ?? await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidKey),
-      })
-      const res = await fetch('/api/push/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sub.toJSON()),
-      })
-      if (res.ok) setNeedsPushSub(false)
-    } catch {}
+    const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+    if (!vapidKey) throw new Error('VAPID_KEY_MISSING')
+    const existing = await reg.pushManager.getSubscription()
+    const sub = existing ?? await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(vapidKey),
+    })
+    const res = await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(sub.toJSON()),
+    })
+    if (!res.ok) throw new Error('API_FAILED')
+    setNeedsPushSub(false)
+    setPushError(null)
   }
 
   async function activatePush() {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
-    const reg = await navigator.serviceWorker.ready
-    await subscribePush(reg)
+    setPushError(null)
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      setPushError('Push nu este suportat pe acest dispozitiv.')
+      setNeedsPushSub(false)
+      return
+    }
+    try {
+      const reg = await navigator.serviceWorker.ready
+      await subscribePush(reg)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      if (msg === 'VAPID_KEY_MISSING') {
+        setPushError('Configurație lipsă. Contactează adminul.')
+      } else if (msg === 'API_FAILED') {
+        setPushError('Server error. Încearcă din nou.')
+      } else {
+        setPushError(`Eroare: ${msg}`)
+      }
+    }
   }
 
   async function requestNotifPermission() {
@@ -382,9 +399,14 @@ export default function Navbar({ profile }: { profile: Profile }) {
       {/* Step 2: subscribe for push (needs user gesture — separate from permission) */}
       {notifPerm === 'granted' && needsPushSub && (
         <div className="bg-brand-50 border-b border-brand-100 px-4 py-2 flex items-center justify-between gap-3">
-          <p className="text-xs text-brand-800 flex-1">
-            Apasă pentru a activa notificările chiar și cu aplicația închisă.
-          </p>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-brand-800">
+              Apasă pentru a activa notificările chiar și cu aplicația închisă.
+            </p>
+            {pushError && (
+              <p className="text-xs text-red-600 mt-0.5">{pushError}</p>
+            )}
+          </div>
           <button
             onClick={activatePush}
             className="text-xs font-semibold text-white bg-brand-600 rounded-lg px-3 py-1.5 hover:bg-brand-700 active:scale-95 transition-all flex-shrink-0"
