@@ -137,7 +137,7 @@ export default function ConversatiiClient({ users, currentUserId, currentUserRol
     <div className="md:flex md:gap-4 md:h-[calc(100vh-12rem)]">
 
       {/* ── List panel ──────────────────────────────────────────────────── */}
-      <div className={`flex flex-col gap-2 md:w-64 md:flex-shrink-0 ${mobileView === 'chat' ? 'hidden' : 'flex'}`}>
+      <div className={`flex flex-col gap-2 md:w-64 md:flex-shrink-0 ${mobileView === 'chat' ? 'hidden md:flex' : 'flex'}`}>
         <input
           type="text"
           value={search}

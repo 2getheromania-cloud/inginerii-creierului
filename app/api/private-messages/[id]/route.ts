@@ -35,3 +35,28 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (!updated?.length) return NextResponse.json({ error: 'Mesajul nu a fost găsit.' }, { status: 404 })
   return NextResponse.json({ ok: true, content: updated[0].content })
 }
+
+// DELETE — delete own private message
+export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+  const authClient = createClient()
+  const { data: { user } } = await authClient.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { data: msg } = await service()
+    .from('private_messages')
+    .select('sender_id')
+    .eq('id', params.id)
+    .single()
+
+  if (!msg || msg.sender_id !== user.id) {
+    return NextResponse.json({ error: 'Poți șterge doar mesajele tale.' }, { status: 403 })
+  }
+
+  const { error } = await service()
+    .from('private_messages')
+    .delete()
+    .eq('id', params.id)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}

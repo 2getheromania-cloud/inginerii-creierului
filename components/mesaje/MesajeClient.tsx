@@ -21,7 +21,7 @@ function groupReactions(reactions: ChatReaction[] = [], currentUserId: string) {
 }
 
 function MessageBubble({
-  msg, isOwn, userId, isHighlighted, onReact, onEdit, onReply, onScrollToMessage,
+  msg, isOwn, userId, isHighlighted, onReact, onEdit, onDelete, onReply, onScrollToMessage,
 }: {
   msg: PrivateMessage
   isOwn: boolean
@@ -29,6 +29,7 @@ function MessageBubble({
   isHighlighted?: boolean
   onReact: (id: string, emoji: string) => void
   onEdit: (id: string, content: string) => Promise<void>
+  onDelete: (id: string) => void
   onReply: (msg: PrivateMessage) => void
   onScrollToMessage: (id: string) => void
 }) {
@@ -146,6 +147,12 @@ function MessageBubble({
                 <span>✏️</span><span>Editează</span>
               </button>
             )}
+            {isOwn && (
+              <button type="button" onClick={() => onDelete(msg.id)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 20, background: '#fee2e2', color: '#b91c1c', fontSize: 17, fontWeight: 500, border: 'none', cursor: 'pointer' }}>
+                <span>🗑️</span><span>Șterge</span>
+              </button>
+            )}
           </div>
         )}
 
@@ -233,7 +240,11 @@ export default function MesajeClient({ conversationId, userId }: Props) {
         event: 'INSERT', schema: 'public', table: 'private_messages',
         filter: `conversation_id=eq.${conversationId}`,
       }, payload => {
-        setMessages(prev => [...prev, payload.new as PrivateMessage])
+        const incoming = payload.new as PrivateMessage
+        setMessages(prev => {
+          if (prev.some(m => m.id === incoming.id)) return prev
+          return [...prev, incoming]
+        })
         setTimeout(scrollToBottom, 50)
         markRead()
       })
@@ -262,6 +273,16 @@ export default function MesajeClient({ conversationId, userId }: Props) {
       body: JSON.stringify({ message_id: msgId, emoji }),
     }).catch(() => {})
   }, [userId])
+
+  const handleDelete = useCallback(async (msgId: string) => {
+    setMessages(prev => prev.filter(m => m.id !== msgId))
+    const res = await fetch(`/api/private-messages/${msgId}`, { method: 'DELETE' })
+    if (!res.ok) {
+      fetch(`/api/conversations/${conversationId}/messages`)
+        .then(async r => { if (r.ok) { const data = await r.json(); setMessages(data) } })
+        .catch(() => {})
+    }
+  }, [conversationId])
 
   const handleEdit = useCallback(async (msgId: string, content: string) => {
     const res = await fetch(`/api/private-messages/${msgId}`, {
@@ -334,6 +355,7 @@ export default function MesajeClient({ conversationId, userId }: Props) {
               isHighlighted={searchResultIds.length > 0 && searchResultIds[searchIdx] === msg.id}
               onReact={handleReact}
               onEdit={handleEdit}
+              onDelete={handleDelete}
               onReply={setReplyTo}
               onScrollToMessage={scrollToMessage}
             />
