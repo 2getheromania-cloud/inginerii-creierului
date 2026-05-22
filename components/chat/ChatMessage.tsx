@@ -36,7 +36,7 @@ const pillStyle: React.CSSProperties = {
   borderRadius: '20px',
   background: '#f3f4f6',
   color: '#374151',
-  fontSize: '15px',
+  fontSize: '17px',
   fontWeight: 500,
   border: 'none',
   cursor: 'pointer',
@@ -117,7 +117,7 @@ export default function ChatMessageBubble({
       <div className="w-full px-4 py-1">
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
           <p className="text-sm text-amber-600 font-semibold mb-1">📣 Anunț de la echipă</p>
-          {body && <p className="text-base text-gray-800 whitespace-pre-wrap break-words leading-relaxed">{linkifyText(body)}</p>}
+          {body && <p className="text-lg text-gray-800 whitespace-pre-wrap break-words leading-relaxed">{linkifyText(body)}</p>}
           {image_url && (
             <a href={image_url} target="_blank" rel="noopener noreferrer">
               <img src={image_url} alt="imagine" className="mt-2 max-h-60 rounded-lg mx-auto cursor-pointer" loading="lazy" />
@@ -141,7 +141,7 @@ export default function ChatMessageBubble({
       <div className={`flex flex-col max-w-[82%] ${isOwn ? 'items-end' : 'items-start'}`}>
 
         {!isOwn && (
-          <span className={`text-sm font-semibold px-1 mb-0.5 ${isAdminSender ? 'text-amber-700' : 'text-brand-700'}`}>
+          <span className={`text-base font-semibold px-1 mb-0.5 ${isAdminSender ? 'text-amber-700' : 'text-brand-700'}`}>
             {sender.name || sender.email}
           </span>
         )}
@@ -213,7 +213,7 @@ export default function ChatMessageBubble({
               <span className={`text-xs block mb-1 ${isOwn ? 'text-brand-200' : 'text-gray-400'}`}>📌 fixat</span>
             )}
             {body && (
-              <p className="text-base whitespace-pre-wrap break-words leading-relaxed">
+              <p className="text-lg whitespace-pre-wrap break-words leading-relaxed">
                 {linkifyText(body, isOwn
                   ? 'underline break-all opacity-80 hover:opacity-100 text-white'
                   : 'underline break-all opacity-80 hover:opacity-100')}
@@ -224,7 +224,7 @@ export default function ChatMessageBubble({
                 <img src={image_url} alt="imagine" className="mt-1 max-h-60 max-w-full rounded-lg cursor-pointer" loading="lazy" />
               </a>
             )}
-            <span className={`text-xs block text-right mt-1 ${isOwn ? 'text-brand-200' : 'text-gray-400'}`} suppressHydrationWarning>
+            <span className={`text-sm block text-right mt-1 ${isOwn ? 'text-brand-200' : 'text-gray-400'}`} suppressHydrationWarning>
               {time}{edited_at ? ' · editat' : ''}
             </span>
           </div>
