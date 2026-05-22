@@ -145,7 +145,7 @@ function MessageBubble({
               style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 20, background: '#f3f4f6', color: '#374151', fontSize: 17, fontWeight: 500, border: 'none', cursor: 'pointer' }}>
               <span>↩️</span><span>Răspunde</span>
             </button>
-            {isOwn && !isEditing && (
+            {isOwn && !isEditing && !isOptimistic && (
               <button type="button" onClick={() => { setIsEditing(true); setDraft(msg.content) }}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 12px', borderRadius: 20, background: '#f3f4f6', color: '#374151', fontSize: 17, fontWeight: 500, border: 'none', cursor: 'pointer' }}>
                 <span>✏️</span><span>Editează</span>
@@ -323,6 +323,11 @@ export default function AdminPrivateChatClient({ conversationId, currentUserId }
       setText(trimmed)
       const d = await res.json().catch(() => ({}))
       setError(d.error ?? 'Eroare la trimitere')
+    } else {
+      const saved = await res.json().catch(() => null)
+      if (saved?.id) {
+        setMessages(prev => prev.map(m => m.id === optimistic.id ? { ...m, id: saved.id } : m))
+      }
     }
   }
 
