@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { linkifyText, isImageUrl } from '@/lib/linkify'
 import type { PrivateMessage, ChatReaction } from '@/lib/types'
 
 const REACTION_EMOJIS = ['❤️', '🙏', '😊', '🔥', '👏', '💪', '🌿']
@@ -109,7 +110,17 @@ function MessageBubble({
                 </p>
               </button>
             )}
-            <p className="text-[19px] md:text-lg whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
+            {isImageUrl(msg.content) ? (
+              <a href={msg.content} target="_blank" rel="noopener noreferrer">
+                <img src={msg.content} alt="Imagine" className="max-w-full rounded-xl max-h-72 object-contain" />
+              </a>
+            ) : (
+              <p className="text-[19px] md:text-lg whitespace-pre-wrap break-words leading-relaxed">
+                {linkifyText(msg.content, isOwn
+                  ? 'underline break-all opacity-80 hover:opacity-100 text-white'
+                  : 'underline break-all opacity-80 hover:opacity-100 text-gray-700')}
+              </p>
+            )}
             <p className={`text-sm mt-1 text-right ${isOwn ? 'text-brand-200' : 'text-gray-400'}`} suppressHydrationWarning>
               {time}{msg.edited_at ? ' · editat' : ''}
             </p>
@@ -190,8 +201,10 @@ export default function MesajeClient({ conversationId, userId }: Props) {
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchIdx, setSearchIdx] = useState(0)
+  const [uploading, setUploading] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
   const messageRefs = useRef<Map<string, HTMLElement>>(new Map())
   const supabase = createClient()
 
@@ -273,6 +286,33 @@ export default function MesajeClient({ conversationId, userId }: Props) {
       body: JSON.stringify({ message_id: msgId, emoji }),
     }).catch(() => {})
   }, [userId])
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!imageInputRef.current) return
+    imageInputRef.current.value = ''
+    if (!file) return
+    setUploading(true)
+    setError(null)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      const res = await fetch('/api/chat-images', { method: 'POST', body: form })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error ?? 'Eroare la upload.'); return }
+      const msgRes = await fetch(`/api/conversations/${conversationId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: data.url }),
+      })
+      if (!msgRes.ok) {
+        const d = await msgRes.json().catch(() => ({}))
+        setError(d.error ?? 'Eroare la trimitere.')
+      }
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const handleDelete = useCallback(async (msgId: string) => {
     setMessages(prev => prev.filter(m => m.id !== msgId))
@@ -380,10 +420,15 @@ export default function MesajeClient({ conversationId, userId }: Props) {
         </div>
       )}
 
+      <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp" className="hidden" onChange={handleImageUpload} />
       <form onSubmit={handleSend} className="border-t border-gray-100 bg-white px-3 py-3 flex gap-2 items-end flex-shrink-0">
         <button type="button" onClick={() => setSearchOpen(o => !o)}
           className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-50 active:bg-gray-100 transition-colors flex-shrink-0"
           title="Caută în mesaje">🔍</button>
+        <button type="button" onClick={() => imageInputRef.current?.click()} disabled={uploading}
+          className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-50 active:bg-gray-100 transition-colors flex-shrink-0 disabled:opacity-40"
+          title="Trimite imagine">📎</button>
+        {uploading && <span className="text-xs text-gray-400 self-center">Se trimite...</span>}
         <textarea
           ref={textareaRef}
           value={text}

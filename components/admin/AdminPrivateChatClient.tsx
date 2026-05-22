@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { linkifyText } from '@/lib/linkify'
+import { linkifyText, isImageUrl } from '@/lib/linkify'
 import type { PrivateMessage, ChatReaction } from '@/lib/types'
 
 const QUICK_EMOJIS = ['😊', '❤️', '🙏', '🌿', '💪', '🔥', '👏']
@@ -110,11 +110,17 @@ function MessageBubble({
                 </p>
               </button>
             )}
-            <p className="text-[19px] md:text-lg whitespace-pre-wrap break-words leading-relaxed">
-              {linkifyText(msg.content, isOwn
-                ? 'underline break-all opacity-80 hover:opacity-100 text-white'
-                : 'underline break-all opacity-80 hover:opacity-100 text-gray-700')}
-            </p>
+            {isImageUrl(msg.content) ? (
+              <a href={msg.content} target="_blank" rel="noopener noreferrer">
+                <img src={msg.content} alt="Imagine" className="max-w-full rounded-xl max-h-72 object-contain" />
+              </a>
+            ) : (
+              <p className="text-[19px] md:text-lg whitespace-pre-wrap break-words leading-relaxed">
+                {linkifyText(msg.content, isOwn
+                  ? 'underline break-all opacity-80 hover:opacity-100 text-white'
+                  : 'underline break-all opacity-80 hover:opacity-100 text-gray-700')}
+              </p>
+            )}
             <p className={`text-sm mt-1 text-right ${isOwn ? 'text-brand-200' : 'text-gray-400'}`} suppressHydrationWarning>
               {time}{msg.edited_at ? ' · editat' : ''}
             </p>
@@ -195,8 +201,10 @@ export default function AdminPrivateChatClient({ conversationId, currentUserId }
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchIdx, setSearchIdx] = useState(0)
+  const [uploading, setUploading] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
   const messageRefs = useRef<Map<string, HTMLElement>>(new Map())
   const supabase = createClient()
 
@@ -299,6 +307,45 @@ export default function AdminPrivateChatClient({ conversationId, currentUserId }
         .catch(() => {})
     }
   }, [conversationId])
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!imageInputRef.current) return
+    imageInputRef.current.value = ''
+    if (!file) return
+    setUploading(true)
+    setError(null)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      const res = await fetch('/api/chat-images', { method: 'POST', body: form })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error ?? 'Eroare la upload.'); return }
+      const imgUrl: string = data.url
+      const optimistic: PrivateMessage = {
+        id: `tmp-${Date.now()}`, conversation_id: conversationId,
+        sender_id: currentUserId, content: imgUrl, read: false,
+        created_at: new Date().toISOString(),
+      }
+      setMessages(prev => [...prev, optimistic])
+      setTimeout(() => scrollToBottom(true), 30)
+      const msgRes = await fetch(`/api/conversations/${conversationId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: imgUrl }),
+      })
+      if (!msgRes.ok) {
+        setMessages(prev => prev.filter(m => m.id !== optimistic.id))
+        const d = await msgRes.json().catch(() => ({}))
+        setError(d.error ?? 'Eroare la trimitere.')
+      } else {
+        const saved = await msgRes.json().catch(() => null)
+        if (saved?.id) setMessages(prev => prev.map(m => m.id === optimistic.id ? { ...m, id: saved.id } : m))
+      }
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const handleEdit = useCallback(async (msgId: string, content: string) => {
     const res = await fetch(`/api/private-messages/${msgId}`, {
@@ -413,10 +460,15 @@ export default function AdminPrivateChatClient({ conversationId, currentUserId }
       )}
 
       {/* Quick emojis + search */}
+      <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp" className="hidden" onChange={handleImageUpload} />
       <div className="flex items-center gap-1 px-3 pt-2 pb-1 bg-white border-t border-gray-100 flex-shrink-0">
         <button type="button" onClick={() => setSearchOpen(o => !o)}
           className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-50 active:bg-gray-100 transition-colors flex-shrink-0"
           title="Caută în mesaje">🔍</button>
+        <button type="button" onClick={() => imageInputRef.current?.click()} disabled={uploading}
+          className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-50 active:bg-gray-100 transition-colors flex-shrink-0 disabled:opacity-40"
+          title="Trimite imagine">📎</button>
+        {uploading && <span className="text-xs text-gray-400">Se trimite...</span>}
         <div className="flex-1 flex justify-end gap-0.5">
           {QUICK_EMOJIS.map(emoji => (
             <button key={emoji} type="button" onClick={() => setText(prev => prev + emoji)}
