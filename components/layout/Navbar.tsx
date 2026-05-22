@@ -181,6 +181,16 @@ export default function Navbar({ profile }: { profile: Profile }) {
   }, [pathname])
 
   useEffect(() => {
+    const total = unreadPrivate + unreadCommunity
+    if (!('setAppBadge' in navigator)) return
+    if (total > 0) {
+      navigator.setAppBadge(total).catch(() => {})
+    } else {
+      navigator.clearAppBadge().catch(() => {})
+    }
+  }, [unreadPrivate, unreadCommunity])
+
+  useEffect(() => {
     const ping = () => fetch('/api/presence', { method: 'PUT' }).catch(() => {})
     ping()
     const id = setInterval(ping, 30_000)
@@ -188,6 +198,7 @@ export default function Navbar({ profile }: { profile: Profile }) {
   }, [])
 
   async function signOut() {
+    if ('clearAppBadge' in navigator) navigator.clearAppBadge().catch(() => {})
     await supabase.auth.signOut()
     router.push('/')
     router.refresh()
