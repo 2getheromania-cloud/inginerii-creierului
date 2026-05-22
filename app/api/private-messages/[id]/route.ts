@@ -27,11 +27,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const { data: updated, error } = await service()
     .from('private_messages')
-    .update({ content: content.trim(), edited_at: new Date().toISOString() })
+    .update({ content: content.trim() })
     .eq('id', params.id)
-    .select('id')
+    .select('id, content')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   if (!updated?.length) return NextResponse.json({ error: 'Mesajul nu a fost găsit.' }, { status: 404 })
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true, content: updated[0].content })
 }

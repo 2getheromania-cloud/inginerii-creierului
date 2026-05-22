@@ -254,7 +254,7 @@ export default function AdminPrivateChatClient({ conversationId, currentUserId }
         filter: `conversation_id=eq.${conversationId}`,
       }, payload => {
         const updated = payload.new as PrivateMessage
-        setMessages(prev => prev.map(m => m.id === updated.id ? { ...m, content: updated.content, edited_at: updated.edited_at } : m))
+        setMessages(prev => prev.map(m => m.id === updated.id ? { ...m, content: updated.content } : m))
       })
       .subscribe()
 
@@ -289,7 +289,9 @@ export default function AdminPrivateChatClient({ conversationId, currentUserId }
       body: JSON.stringify({ content }),
     })
     if (res.ok) {
-      setMessages(prev => prev.map(m => m.id === msgId ? { ...m, content, edited_at: new Date().toISOString() } : m))
+      const saved = await res.json().catch(() => null)
+      const savedContent = saved?.content ?? content
+      setMessages(prev => prev.map(m => m.id === msgId ? { ...m, content: savedContent } : m))
     }
   }, [])
 

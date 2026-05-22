@@ -242,7 +242,7 @@ export default function MesajeClient({ conversationId, userId }: Props) {
         filter: `conversation_id=eq.${conversationId}`,
       }, payload => {
         const updated = payload.new as PrivateMessage
-        setMessages(prev => prev.map(m => m.id === updated.id ? { ...m, content: updated.content, edited_at: updated.edited_at } : m))
+        setMessages(prev => prev.map(m => m.id === updated.id ? { ...m, content: updated.content } : m))
       })
       .subscribe()
 
