@@ -5,12 +5,12 @@ function service() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 }
 
+// Public key and subject are not secrets — safe to hardcode
+const VAPID_PUBLIC_KEY = 'BKy69Ol32MtmlhW3KyuedEAunYX28zlyqpHiWgRKuNjsih1yb9pOwUpYrIpCX4YkIYWdzSqxdECe2d4kMEwKl8A'
+const VAPID_SUBJECT = 'mailto:2getheromania@gmail.com'
+
 function initVapid() {
-  webPush.setVapidDetails(
-    process.env.VAPID_SUBJECT!,
-    process.env.VAPID_PUBLIC_KEY!,
-    process.env.VAPID_PRIVATE_KEY!,
-  )
+  webPush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY!)
 }
 
 export async function sendPushToUser(
