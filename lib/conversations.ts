@@ -7,13 +7,35 @@ function service() {
 export async function getOrCreateConversation(userA: string, userB: string): Promise<string> {
   const db = service()
 
-  // 1. Find existing new-style conversation (both participant columns set)
-  const { data: existing } = await db
-    .from('conversations')
-    .select('id')
-    .or(`and(participant_a_id.eq.${userA},participant_b_id.eq.${userB}),and(participant_a_id.eq.${userB},participant_b_id.eq.${userA})`)
-    .maybeSingle()
-  if (existing) return existing.id
+  // 1. Find existing new-style conversation (both participant columns set).
+  // Uses two separate queries (one per ordering) to avoid the PostgREST nested
+  // and() inside .or() syntax, which can silently fail and cause duplicates.
+  // When duplicates exist, picks the conversation that has the most recent
+  // message — so both sides always converge on the same active conversation.
+  const allConvIds: string[] = []
+  for (const [a, b] of [[userA, userB], [userB, userA]]) {
+    const { data: rows } = await db
+      .from('conversations')
+      .select('id')
+      .eq('participant_a_id', a)
+      .eq('participant_b_id', b)
+    for (const row of (rows ?? []) as { id: string }[]) {
+      if (!allConvIds.includes(row.id)) allConvIds.push(row.id)
+    }
+  }
+  if (allConvIds.length === 1) return allConvIds[0]
+  if (allConvIds.length > 1) {
+    // Multiple conversations: pick the one with the most recent message
+    const { data: msgRow } = await db
+      .from('private_messages')
+      .select('conversation_id')
+      .in('conversation_id', allConvIds)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    // Fall back to first found (oldest by insert order) if no messages yet
+    return (msgRow as { conversation_id: string } | null)?.conversation_id ?? allConvIds[0]
+  }
 
   // 2. Upgrade old-style or half-migrated rows for either user
   for (const [uid, other] of [[userA, userB], [userB, userA]]) {

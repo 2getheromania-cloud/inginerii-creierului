@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import AdminPrivateChatClient from '@/components/admin/AdminPrivateChatClient'
 
 interface UserItem {
@@ -68,8 +68,9 @@ export default function ConversatiiClient({ users, currentUserId, currentUserRol
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
-  // Mobile navigation state: 'list' or 'chat'
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list')
+  const autoOpenDone = useRef(false)
+
 
   const q = search.toLowerCase()
   const filtered = users.filter(
@@ -80,6 +81,7 @@ export default function ConversatiiClient({ users, currentUserId, currentUserRol
   const showGroups = currentUserRole === 'admin'
 
   async function handleSelect(u: UserItem) {
+    console.log('[CHAT] handleSelect called for user:', u.id, u.name)
     setSelected(u)
     setConversationId(null)
     setLoading(true)
@@ -92,9 +94,34 @@ export default function ConversatiiClient({ users, currentUserId, currentUserRol
       })
       const data = await res.json()
       if (data.id) setConversationId(data.id)
+    } catch {
+      // ignore
     } finally {
       setLoading(false)
     }
+  }
+
+  // Auto-open: on mount, open the last-opened user (localStorage) or the only user in the list.
+  // This ensures the cursant sees the conversation immediately when navigating to /mesaje.
+  useEffect(() => {
+    if (autoOpenDone.current || users.length === 0) return
+
+    const lastId = (() => {
+      try { return localStorage.getItem('lastPrivateChatUserId') } catch { return null }
+    })()
+
+    const target = (lastId ? users.find(u => u.id === lastId) : null) ?? (users.length === 1 ? users[0] : null)
+    if (target) {
+      autoOpenDone.current = true
+      handleSelect(target)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Persist last-opened user so we can auto-open on next visit
+  function selectAndRemember(u: UserItem) {
+    try { localStorage.setItem('lastPrivateChatUserId', u.id) } catch {}
+    handleSelect(u)
   }
 
   if (users.length === 0) {
@@ -128,7 +155,7 @@ export default function ConversatiiClient({ users, currentUserId, currentUserRol
                     Admini
                   </p>
                   {admins.map(u => (
-                    <UserRow key={u.id} u={u} isSelected={selected?.id === u.id} onClick={() => handleSelect(u)} />
+                    <UserRow key={u.id} u={u} isSelected={selected?.id === u.id} onClick={() => selectAndRemember(u)} />
                   ))}
                 </>
               )}
@@ -138,14 +165,14 @@ export default function ConversatiiClient({ users, currentUserId, currentUserRol
                     Cursanți
                   </p>
                   {cursanti.map(u => (
-                    <UserRow key={u.id} u={u} isSelected={selected?.id === u.id} onClick={() => handleSelect(u)} />
+                    <UserRow key={u.id} u={u} isSelected={selected?.id === u.id} onClick={() => selectAndRemember(u)} />
                   ))}
                 </>
               )}
             </>
           ) : (
             filtered.map(u => (
-              <UserRow key={u.id} u={u} isSelected={selected?.id === u.id} onClick={() => handleSelect(u)} />
+              <UserRow key={u.id} u={u} isSelected={selected?.id === u.id} onClick={() => selectAndRemember(u)} />
             ))
           )}
           {filtered.length === 0 && (

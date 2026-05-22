@@ -221,8 +221,17 @@ export default function AdminPrivateChatClient({ conversationId, currentUserId }
   useEffect(() => {
     markRead()
     fetch(`/api/conversations/${conversationId}/messages`)
-      .then(r => r.json())
-      .then((data: PrivateMessage[]) => { setMessages(data); setTimeout(() => scrollToBottom(false), 50) })
+      .then(async r => {
+        if (!r.ok) return
+        const data: PrivateMessage[] = await r.json()
+        setMessages(prev => {
+          const byId = new Map(data.map(m => [m.id, m]))
+          for (const m of prev) if (!byId.has(m.id)) byId.set(m.id, m)
+          return Array.from(byId.values()).sort((a, b) => a.created_at < b.created_at ? -1 : 1)
+        })
+        setTimeout(() => scrollToBottom(false), 50)
+      })
+      .catch(() => {})
 
     const channel = supabase
       .channel(`admin-conv:${conversationId}`)

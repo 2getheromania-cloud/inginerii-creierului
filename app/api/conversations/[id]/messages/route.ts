@@ -51,18 +51,63 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const { data: { user } } = await authClient.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const checked = await getConvAndCheck(params.id, user.id)
-  if (!checked) return NextResponse.json({ error: 'Not found or forbidden' }, { status: 403 })
+  const svcClient = service()
 
-  const svc = service()
-  const { data } = await svc
+  // Verify participation using service role (bypasses RLS entirely)
+  const { data: conv, error: convErr } = await svcClient
+    .from('conversations')
+    .select('user_id, participant_a_id, participant_b_id')
+    .eq('id', params.id)
+    .single()
+
+  if (convErr || !conv) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
+  const { data: profile } = await svcClient.from('profiles').select('role').eq('id', user.id).single()
+  const isAdmin = profile?.role === 'admin'
+  const isParticipant =
+    conv.user_id === user.id || conv.participant_a_id === user.id || conv.participant_b_id === user.id
+
+  if (!isParticipant && !isAdmin) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  // Fetch messages with service role (bypasses RLS, same as Realtime channel check)
+  const { data: msgs, error: msgsErr } = await svcClient
     .from('private_messages')
-    .select('*, reactions:private_message_reactions(emoji, user_id), reply_to:private_messages!reply_to_id(id, content, sender_id)')
+    .select('*')
     .eq('conversation_id', params.id)
     .order('created_at', { ascending: true })
     .limit(200)
 
-  const enriched = await enrichWithReplies((data ?? []) as unknown as Record<string, unknown>[], svc)
+  if (msgsErr) {
+    return NextResponse.json({ error: msgsErr.message }, { status: 500 })
+  }
+
+  if (!msgs?.length) return NextResponse.json([])
+
+  // Fetch reactions with service role (no sensitive data, avoids RLS complexity)
+  const svc = svcClient
+  const msgIds = msgs.map((m: Record<string, unknown>) => m.id as string)
+  const { data: reactions } = await svc
+    .from('private_message_reactions')
+    .select('message_id, emoji, user_id')
+    .in('message_id', msgIds)
+
+  const reactMap = new Map<string, { emoji: string; user_id: string }[]>()
+  for (const r of (reactions ?? []) as { message_id: string; emoji: string; user_id: string }[]) {
+    const arr = reactMap.get(r.message_id) ?? []
+    arr.push({ emoji: r.emoji, user_id: r.user_id })
+    reactMap.set(r.message_id, arr)
+  }
+
+  const withReactions = msgs.map((m: Record<string, unknown>) => ({
+    ...m,
+    reactions: reactMap.get(m.id as string) ?? [],
+  }))
+
+  const enriched = await enrichWithReplies(withReactions as Record<string, unknown>[], svc)
   return NextResponse.json(enriched)
 }
 
