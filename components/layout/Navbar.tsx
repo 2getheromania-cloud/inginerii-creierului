@@ -108,10 +108,10 @@ export default function Navbar({ profile }: { profile: Profile }) {
   const [unreadCommunity, setUnreadCommunity] = useState(0)
   const [toasts, setToasts]                   = useState<ToastItem[]>([])
   const [notifPerm, setNotifPerm]             = useState<NotificationPermission | null>(null)
+  const [needsPushSub, setNeedsPushSub]       = useState(false)
 
   useEffect(() => {
     if (typeof Notification !== 'undefined') setNotifPerm(Notification.permission)
-    // If permission already granted, ensure push subscription is registered
     if (
       typeof Notification !== 'undefined' &&
       Notification.permission === 'granted' &&
@@ -119,7 +119,20 @@ export default function Navbar({ profile }: { profile: Profile }) {
       'PushManager' in window
     ) {
       navigator.serviceWorker.ready
-        .then(reg => subscribePush(reg))
+        .then(async reg => {
+          const existing = await reg.pushManager.getSubscription()
+          if (existing) {
+            // Re-save existing subscription — no user gesture needed
+            await fetch('/api/push/subscribe', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(existing.toJSON()),
+            }).catch(() => {})
+          } else {
+            // No subscription yet — need a user gesture on iOS to create one
+            setNeedsPushSub(true)
+          }
+        })
         .catch(() => {})
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -222,12 +235,19 @@ export default function Navbar({ profile }: { profile: Profile }) {
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(vapidKey),
       })
-      await fetch('/api/push/subscribe', {
+      const res = await fetch('/api/push/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(sub.toJSON()),
       })
+      if (res.ok) setNeedsPushSub(false)
     } catch {}
+  }
+
+  async function activatePush() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
+    const reg = await navigator.serviceWorker.ready
+    await subscribePush(reg)
   }
 
   async function requestNotifPermission() {
@@ -336,7 +356,7 @@ export default function Navbar({ profile }: { profile: Profile }) {
         </div>
       </nav>
 
-      {/* Notification permission prompt — shown whenever permission hasn't been granted/denied */}
+      {/* Step 1: grant notification permission */}
       {notifPerm === 'default' && (
         <div className="bg-brand-50 border-b border-brand-100 px-4 py-2 flex items-center justify-between gap-3">
           <p className="text-xs text-brand-800 flex-1">
@@ -356,6 +376,21 @@ export default function Navbar({ profile }: { profile: Profile }) {
               Nu acum
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Step 2: subscribe for push (needs user gesture — separate from permission) */}
+      {notifPerm === 'granted' && needsPushSub && (
+        <div className="bg-brand-50 border-b border-brand-100 px-4 py-2 flex items-center justify-between gap-3">
+          <p className="text-xs text-brand-800 flex-1">
+            Apasă pentru a activa notificările chiar și cu aplicația închisă.
+          </p>
+          <button
+            onClick={activatePush}
+            className="text-xs font-semibold text-white bg-brand-600 rounded-lg px-3 py-1.5 hover:bg-brand-700 active:scale-95 transition-all flex-shrink-0"
+          >
+            Activează
+          </button>
         </div>
       )}
 
