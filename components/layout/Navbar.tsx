@@ -107,6 +107,11 @@ export default function Navbar({ profile }: { profile: Profile }) {
   const [unreadPrivate, setUnreadPrivate]     = useState(0)
   const [unreadCommunity, setUnreadCommunity] = useState(0)
   const [toasts, setToasts]                   = useState<ToastItem[]>([])
+  const [notifPerm, setNotifPerm]             = useState<NotificationPermission | null>(null)
+
+  useEffect(() => {
+    if (typeof Notification !== 'undefined') setNotifPerm(Notification.permission)
+  }, [])
 
   const stateRef = useRef({
     pathname,
@@ -182,14 +187,33 @@ export default function Navbar({ profile }: { profile: Profile }) {
 
   useEffect(() => {
     const total = unreadPrivate + unreadCommunity
-    // Direct call (desktop Chrome, Android)
     if ('setAppBadge' in navigator) {
       if (total > 0) navigator.setAppBadge(total).catch(() => {})
       else navigator.clearAppBadge().catch(() => {})
     }
-    // Via service worker (required on iOS)
-    navigator.serviceWorker?.controller?.postMessage({ type: 'SET_BADGE', count: total })
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready
+        .then(reg => reg.active?.postMessage({ type: 'SET_BADGE', count: total }))
+        .catch(() => {})
+    }
   }, [unreadPrivate, unreadCommunity])
+
+  async function requestNotifPermission() {
+    if (typeof Notification === 'undefined') return
+    const result = await Notification.requestPermission()
+    setNotifPerm(result)
+    if (result === 'granted') {
+      const total = unreadPrivate + unreadCommunity
+      if ('setAppBadge' in navigator) {
+        if (total > 0) navigator.setAppBadge(total).catch(() => {})
+      }
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready
+          .then(reg => reg.active?.postMessage({ type: 'SET_BADGE', count: total }))
+          .catch(() => {})
+      }
+    }
+  }
 
   useEffect(() => {
     const ping = () => fetch('/api/presence', { method: 'PUT' }).catch(() => {})
@@ -275,6 +299,29 @@ export default function Navbar({ profile }: { profile: Profile }) {
           </div>
         </div>
       </nav>
+
+      {/* Notification permission prompt — shown once when there are unread messages */}
+      {notifPerm === 'default' && (unreadPrivate + unreadCommunity) > 0 && (
+        <div className="bg-brand-50 border-b border-brand-100 px-4 py-2 flex items-center justify-between gap-3">
+          <p className="text-xs text-brand-800 flex-1">
+            Activează notificările pentru a vedea cifra pe iconița aplicației.
+          </p>
+          <div className="flex gap-2 flex-shrink-0">
+            <button
+              onClick={requestNotifPermission}
+              className="text-xs font-semibold text-white bg-brand-600 rounded-lg px-3 py-1.5 hover:bg-brand-700 active:scale-95 transition-all"
+            >
+              Activează
+            </button>
+            <button
+              onClick={() => setNotifPerm('denied')}
+              className="text-xs text-brand-500 hover:text-brand-700 px-1"
+            >
+              Nu acum
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Toast container — positioned below the two-row navbar (~88px) */}
       <div
