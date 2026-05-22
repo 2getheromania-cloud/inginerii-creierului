@@ -230,9 +230,9 @@ export default function Navbar({ profile }: { profile: Profile }) {
   async function subscribePush(reg: ServiceWorkerRegistration) {
     // Fetch VAPID key at runtime so it's not baked into the client bundle
     const kvRes = await fetch('/api/push/vapid-key')
-    if (!kvRes.ok) throw new Error('VAPID_KEY_MISSING')
+    if (!kvRes.ok) throw new Error(`VAPID_FETCH_${kvRes.status}`)
     const { key: vapidKey } = await kvRes.json() as { key?: string }
-    if (!vapidKey) throw new Error('VAPID_KEY_MISSING')
+    if (!vapidKey) throw new Error('VAPID_KEY_EMPTY')
 
     const existing = await reg.pushManager.getSubscription()
     const sub = existing ?? await reg.pushManager.subscribe({
@@ -261,13 +261,7 @@ export default function Navbar({ profile }: { profile: Profile }) {
       await subscribePush(reg)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
-      if (msg === 'VAPID_KEY_MISSING') {
-        setPushError('Configurație lipsă. Contactează adminul.')
-      } else if (msg === 'API_FAILED') {
-        setPushError('Server error. Încearcă din nou.')
-      } else {
-        setPushError(`Eroare: ${msg}`)
-      }
+      setPushError(`Eroare: ${msg}`)
     }
   }
 
