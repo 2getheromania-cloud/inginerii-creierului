@@ -11,6 +11,7 @@ interface Props {
   isAdmin: boolean
   currentUserId: string
   isHighlighted?: boolean
+  userNames?: Record<string, string>
   onAdminAction: (id: string, action: 'pin' | 'announce' | 'delete') => void
   onReact: (id: string, emoji: string) => void
   onEdit: (id: string, newBody: string) => Promise<void>
@@ -79,7 +80,7 @@ const sheetRowStyle: React.CSSProperties = {
 }
 
 export default function ChatMessageBubble({
-  message, isOwn, isAdmin, currentUserId, isHighlighted,
+  message, isOwn, isAdmin, currentUserId, isHighlighted, userNames = {},
   onAdminAction, onReact, onEdit, onReply, onScrollToMessage,
 }: Props) {
   const { sender, body, image_url, is_announcement, is_pinned, created_at, edited_at, reactions = [] } = message
@@ -94,6 +95,7 @@ export default function ChatMessageBubble({
   const [isEditing, setIsEditing] = useState(false)
   const [editDraft, setEditDraft] = useState(body ?? '')
   const [saving, setSaving] = useState(false)
+  const [reactionPopup, setReactionPopup] = useState<string | null>(null)
 
   async function saveEdit() {
     const trimmed = editDraft.trim()
@@ -230,11 +232,11 @@ export default function ChatMessageBubble({
           </div>
         )}
 
-        {/* Reaction badges */}
+        {/* Reaction badges — click to see who reacted */}
         {reactionGroups.length > 0 && (
           <div className="flex flex-wrap gap-1 px-1 mt-0.5">
             {reactionGroups.map(({ emoji, count, mine }) => (
-              <button key={emoji} onClick={() => onReact(message.id, emoji)}
+              <button key={emoji} onClick={() => setReactionPopup(emoji)}
                 className={`flex items-center gap-0.5 text-xs rounded-full px-1.5 py-0.5 border transition-colors ${
                   mine ? 'bg-brand-50 border-brand-300 text-brand-700' : 'bg-white border-gray-200 text-gray-600'
                 }`}>
@@ -242,6 +244,35 @@ export default function ChatMessageBubble({
               </button>
             ))}
           </div>
+        )}
+
+        {/* Reaction popup — who reacted */}
+        {reactionPopup && (
+          <>
+            <div style={overlayStyle} onClick={() => setReactionPopup(null)} />
+            <div style={sheetStyle}>
+              <div style={sheetHandleStyle} />
+              <p style={{ textAlign: 'center', fontSize: 28, marginBottom: 4 }}>{reactionPopup}</p>
+              <p style={{ textAlign: 'center', fontSize: 13, color: '#9ca3af', marginBottom: 12 }}>
+                {(reactions ?? []).filter(r => r.emoji === reactionPopup).length} reacții
+              </p>
+              {(reactions ?? []).filter(r => r.emoji === reactionPopup).map(r => {
+                const name = r.user_id === currentUserId ? 'Tu' : (userNames[r.user_id] ?? 'Utilizator')
+                return (
+                  <div key={r.user_id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 0', borderBottom: '1px solid #f9fafb' }}>
+                    <span style={{ flex: 1, fontSize: 15, color: '#1f2937' }}>{name}</span>
+                    {r.user_id === currentUserId && (
+                      <button onClick={() => { onReact(message.id, reactionPopup); setReactionPopup(null) }}
+                        style={{ fontSize: 12, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px' }}>
+                        Retrage
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+              <button onClick={() => setReactionPopup(null)} style={sheetCancelStyle}>Închide</button>
+            </div>
+          </>
         )}
 
         {/* ─── ACTION BAR: always visible, labeled, static layout ─── */}

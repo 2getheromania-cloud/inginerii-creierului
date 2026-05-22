@@ -235,6 +235,7 @@ export default function ConversatiiClient({ users, currentUserId, currentUserRol
             key={conversationId}
             conversationId={conversationId}
             currentUserId={currentUserId}
+            otherUserName={selected.name}
           />
         )}
 

@@ -10,6 +10,7 @@ const REACTION_EMOJIS = ['❤️', '🙏', '😊', '🔥', '👏', '💪', '🌿
 interface Props {
   conversationId: string
   currentUserId: string
+  otherUserName?: string
 }
 
 function groupReactions(reactions: ChatReaction[] = [], currentUserId: string) {
@@ -22,11 +23,12 @@ function groupReactions(reactions: ChatReaction[] = [], currentUserId: string) {
 }
 
 function MessageBubble({
-  msg, isOwn, currentUserId, isHighlighted, onReact, onEdit, onDelete, onReply, onScrollToMessage,
+  msg, isOwn, currentUserId, otherUserName, isHighlighted, onReact, onEdit, onDelete, onReply, onScrollToMessage,
 }: {
   msg: PrivateMessage
   isOwn: boolean
   currentUserId: string
+  otherUserName?: string
   isHighlighted?: boolean
   onReact: (id: string, emoji: string) => void
   onEdit: (id: string, content: string) => Promise<void>
@@ -35,6 +37,7 @@ function MessageBubble({
   onScrollToMessage: (id: string) => void
 }) {
   const [showPicker, setShowPicker] = useState(false)
+  const [reactionPopup, setReactionPopup] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState(msg.content)
   const [saving, setSaving] = useState(false)
@@ -127,11 +130,11 @@ function MessageBubble({
           </div>
         )}
 
-        {/* Reaction badges */}
+        {/* Reaction badges — click to see who reacted */}
         {reactionGroups.length > 0 && (
           <div className="flex flex-wrap gap-1 px-1 mt-0.5">
             {reactionGroups.map(({ emoji, count, mine }) => (
-              <button key={emoji} onClick={() => onReact(msg.id, emoji)}
+              <button key={emoji} onClick={() => setReactionPopup(emoji)}
                 className={`flex items-center gap-0.5 text-xs rounded-full px-1.5 py-0.5 border transition-colors ${
                   mine ? 'bg-brand-50 border-brand-300 text-brand-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
                 }`}>
@@ -139,6 +142,38 @@ function MessageBubble({
               </button>
             ))}
           </div>
+        )}
+
+        {/* Who reacted popup */}
+        {reactionPopup && (
+          <>
+            <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={() => setReactionPopup(null)} />
+            <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, background: 'white', borderRadius: '20px 20px 0 0', boxShadow: '0 -4px 24px rgba(0,0,0,0.18)', padding: '12px 24px 32px' }}>
+              <div style={{ width: 40, height: 4, background: '#e5e7eb', borderRadius: 2, margin: '0 auto 12px' }} />
+              <p style={{ textAlign: 'center', fontSize: 28, marginBottom: 4 }}>{reactionPopup}</p>
+              <p style={{ textAlign: 'center', fontSize: 13, color: '#9ca3af', marginBottom: 12 }}>
+                {(msg.reactions ?? []).filter(r => r.emoji === reactionPopup).length} reacții
+              </p>
+              {(msg.reactions ?? []).filter(r => r.emoji === reactionPopup).map(r => {
+                const name = r.user_id === currentUserId ? 'Tu' : (otherUserName ?? 'Utilizator')
+                return (
+                  <div key={r.user_id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 0', borderBottom: '1px solid #f9fafb' }}>
+                    <span style={{ flex: 1, fontSize: 15, color: '#1f2937' }}>{name}</span>
+                    {r.user_id === currentUserId && (
+                      <button onClick={() => { onReact(msg.id, reactionPopup); setReactionPopup(null) }}
+                        style={{ fontSize: 12, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px' }}>
+                        Retrage
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+              <button onClick={() => setReactionPopup(null)}
+                style={{ width: '100%', padding: '12px 0', fontSize: 13, color: '#9ca3af', background: 'transparent', border: 'none', borderTop: '1px solid #f3f4f6', cursor: 'pointer', marginTop: 8 }}>
+                Închide
+              </button>
+            </div>
+          </>
         )}
 
         {/* Action bar — inline styles, always visible, no hover/breakpoint dependency */}

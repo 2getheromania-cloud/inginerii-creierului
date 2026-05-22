@@ -41,6 +41,16 @@ export default function ChatClient({ initialMessages, userId, userRole }: Props)
   const isAtBottomRef = useRef(true)
   const messageRefs = useRef<Map<string, HTMLElement>>(new Map())
 
+  const userNames = useMemo(() => {
+    const map: Record<string, string> = {}
+    for (const msg of messages) {
+      if (msg.sender_id && msg.sender) {
+        map[msg.sender_id] = msg.sender.name || msg.sender.email || 'Utilizator'
+      }
+    }
+    return map
+  }, [messages])
+
   const searchResultIds = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
     if (!q) return []
@@ -341,6 +351,7 @@ export default function ChatClient({ initialMessages, userId, userRole }: Props)
                 isAdmin={isAdmin}
                 currentUserId={userId}
                 isHighlighted={searchResultIds.length > 0 && searchResultIds[searchIdx] === msg.id}
+                userNames={userNames}
                 onAdminAction={handleAdminAction}
                 onReact={handleReact}
                 onEdit={handleEdit}
