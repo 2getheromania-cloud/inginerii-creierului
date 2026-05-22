@@ -1,7 +1,7 @@
 // Minimal service worker for PWA installability
 // Network-first strategy — no aggressive caching to avoid stale Next.js builds
 
-const CACHE = 'ic-v3'
+const CACHE = 'ic-v4'
 
 self.addEventListener('install', () => self.skipWaiting())
 
@@ -12,6 +12,18 @@ self.addEventListener('activate', e =>
     ).then(() => clients.claim())
   )
 )
+
+// Badge API — called from the page via postMessage (more reliable on iOS)
+self.addEventListener('message', e => {
+  if (e.data?.type === 'SET_BADGE') {
+    const count = e.data.count ?? 0
+    if (count > 0) {
+      self.navigator.setAppBadge(count).catch(() => {})
+    } else {
+      self.navigator.clearAppBadge().catch(() => {})
+    }
+  }
+})
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url)

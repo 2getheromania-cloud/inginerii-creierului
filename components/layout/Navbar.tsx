@@ -182,12 +182,13 @@ export default function Navbar({ profile }: { profile: Profile }) {
 
   useEffect(() => {
     const total = unreadPrivate + unreadCommunity
-    if (!('setAppBadge' in navigator)) return
-    if (total > 0) {
-      navigator.setAppBadge(total).catch(() => {})
-    } else {
-      navigator.clearAppBadge().catch(() => {})
+    // Direct call (desktop Chrome, Android)
+    if ('setAppBadge' in navigator) {
+      if (total > 0) navigator.setAppBadge(total).catch(() => {})
+      else navigator.clearAppBadge().catch(() => {})
     }
+    // Via service worker (required on iOS)
+    navigator.serviceWorker?.controller?.postMessage({ type: 'SET_BADGE', count: total })
   }, [unreadPrivate, unreadCommunity])
 
   useEffect(() => {
