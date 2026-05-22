@@ -24,10 +24,12 @@ export async function POST(req: NextRequest) {
     .maybeSingle()
 
   if (existing) {
-    await service().from('private_message_reactions').delete().eq('id', existing.id)
+    const { error } = await service().from('private_message_reactions').delete().eq('id', existing.id)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ action: 'removed' })
   } else {
-    await service().from('private_message_reactions').insert({ message_id, user_id: user.id, emoji })
+    const { error } = await service().from('private_message_reactions').insert({ message_id, user_id: user.id, emoji })
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ action: 'added' })
   }
 }
