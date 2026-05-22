@@ -228,8 +228,12 @@ export default function Navbar({ profile }: { profile: Profile }) {
   }, [unreadPrivate, unreadCommunity])
 
   async function subscribePush(reg: ServiceWorkerRegistration) {
-    const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+    // Fetch VAPID key at runtime so it's not baked into the client bundle
+    const kvRes = await fetch('/api/push/vapid-key')
+    if (!kvRes.ok) throw new Error('VAPID_KEY_MISSING')
+    const { key: vapidKey } = await kvRes.json() as { key?: string }
     if (!vapidKey) throw new Error('VAPID_KEY_MISSING')
+
     const existing = await reg.pushManager.getSubscription()
     const sub = existing ?? await reg.pushManager.subscribe({
       userVisibleOnly: true,
