@@ -111,6 +111,18 @@ export default function Navbar({ profile }: { profile: Profile }) {
 
   useEffect(() => {
     if (typeof Notification !== 'undefined') setNotifPerm(Notification.permission)
+    // If permission already granted, ensure push subscription is registered
+    if (
+      typeof Notification !== 'undefined' &&
+      Notification.permission === 'granted' &&
+      'serviceWorker' in navigator &&
+      'PushManager' in window
+    ) {
+      navigator.serviceWorker.ready
+        .then(reg => subscribePush(reg))
+        .catch(() => {})
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const stateRef = useRef({
