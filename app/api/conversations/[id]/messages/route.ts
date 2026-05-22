@@ -167,19 +167,27 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   ;(async () => {
     try {
       const { maybeNotifyPrivateMessage } = await import('@/lib/notifications')
+      const { sendPushToUser } = await import('@/lib/push')
       const senderName = senderProfile?.name ?? senderProfile?.email ?? 'Utilizator'
       const text = content.trim()
+      const preview = text.length > 100 ? text.slice(0, 97) + '…' : text
 
       if (conv.participant_a_id && conv.participant_b_id) {
         // New-style: notify the other participant
         const recipientId = conv.participant_a_id === user.id
           ? conv.participant_b_id
           : conv.participant_a_id
-        await maybeNotifyPrivateMessage(params.id, recipientId, senderName, text)
+        await Promise.all([
+          maybeNotifyPrivateMessage(params.id, recipientId, senderName, text),
+          sendPushToUser(recipientId, { title: senderName, body: preview, url: '/mesaje' }),
+        ])
       } else if (isAdmin) {
         // Old-style admin → cursant
         const cursantId = conv.user_id ?? conv.participant_a_id
-        if (cursantId) await maybeNotifyPrivateMessage(params.id, cursantId, senderName, text)
+        if (cursantId) await Promise.all([
+          maybeNotifyPrivateMessage(params.id, cursantId, senderName, text),
+          sendPushToUser(cursantId, { title: senderName, body: preview, url: '/mesaje' }),
+        ])
       } else {
         // Old-style cursant → all admins
         const { data: admins } = await service()
@@ -187,7 +195,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           .select('id')
           .eq('role', 'admin')
         for (const admin of admins ?? []) {
-          await maybeNotifyPrivateMessage(params.id, admin.id, senderName, text)
+          await Promise.all([
+            maybeNotifyPrivateMessage(params.id, admin.id, senderName, text),
+            sendPushToUser(admin.id, { title: senderName, body: preview, url: '/mesaje' }),
+          ])
         }
       }
     } catch {}

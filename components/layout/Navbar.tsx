@@ -201,6 +201,23 @@ export default function Navbar({ profile }: { profile: Profile }) {
     }
   }, [unreadPrivate, unreadCommunity])
 
+  async function subscribePush(reg: ServiceWorkerRegistration) {
+    try {
+      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+      if (!vapidKey) return
+      const existing = await reg.pushManager.getSubscription()
+      const sub = existing ?? await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey),
+      })
+      await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sub.toJSON()),
+      })
+    } catch {}
+  }
+
   async function requestNotifPermission() {
     if (typeof Notification === 'undefined') return
     const result = await Notification.requestPermission()
@@ -212,9 +229,10 @@ export default function Navbar({ profile }: { profile: Profile }) {
       }
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.ready
-          .then(reg => {
+          .then(async reg => {
             const sw = reg.active ?? reg.waiting ?? reg.installing
             sw?.postMessage({ type: 'SET_BADGE', count: total })
+            await subscribePush(reg)
           })
           .catch(() => {})
       }
@@ -346,6 +364,15 @@ export default function Navbar({ profile }: { profile: Profile }) {
       </div>
     </>
   )
+}
+
+function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const raw = atob(base64)
+  const buf = new Uint8Array(raw.length)
+  for (let i = 0; i < raw.length; i++) buf[i] = raw.charCodeAt(i)
+  return buf.buffer
 }
 
 function browserNotify(title: string, body: string, tag: string) {

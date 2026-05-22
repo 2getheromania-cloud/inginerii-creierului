@@ -1,7 +1,7 @@
 // Minimal service worker for PWA installability
 // Network-first strategy — no aggressive caching to avoid stale Next.js builds
 
-const CACHE = 'ic-v4'
+const CACHE = 'ic-v5'
 
 self.addEventListener('install', () => self.skipWaiting())
 
@@ -12,6 +12,48 @@ self.addEventListener('activate', e =>
     ).then(() => clients.claim())
   )
 )
+
+// Push notification — updates badge and shows system notification
+self.addEventListener('push', e => {
+  if (!e.data) return
+  let data = {}
+  try { data = e.data.json() } catch { return }
+
+  const title = data.title || 'Inginerii Creierului'
+  const body  = data.body  || 'Mesaj nou'
+  const badge = data.badge || 1
+  const url   = data.url   || '/mesaje'
+
+  e.waitUntil(
+    Promise.all([
+      self.registration.showNotification(title, {
+        body,
+        icon:     '/icon-192.png',
+        badge:    '/icon-192.png',
+        tag:      'private-message',
+        renotify: true,
+        data:     { url },
+      }),
+      self.navigator.setAppBadge
+        ? self.navigator.setAppBadge(badge).catch(() => {})
+        : Promise.resolve(),
+    ])
+  )
+})
+
+// Open the app (or focus existing window) when notification is tapped
+self.addEventListener('notificationclick', e => {
+  e.notification.close()
+  const url = e.notification.data?.url || '/mesaje'
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      for (const c of list) {
+        if ('focus' in c) { c.navigate(url); return c.focus() }
+      }
+      if (clients.openWindow) return clients.openWindow(url)
+    })
+  )
+})
 
 // Badge API — called from the page via postMessage (more reliable on iOS)
 self.addEventListener('message', e => {
