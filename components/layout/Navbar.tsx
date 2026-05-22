@@ -193,7 +193,10 @@ export default function Navbar({ profile }: { profile: Profile }) {
     }
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.ready
-        .then(reg => reg.active?.postMessage({ type: 'SET_BADGE', count: total }))
+        .then(reg => {
+          const sw = reg.active ?? reg.waiting ?? reg.installing
+          sw?.postMessage({ type: 'SET_BADGE', count: total })
+        })
         .catch(() => {})
     }
   }, [unreadPrivate, unreadCommunity])
@@ -209,7 +212,10 @@ export default function Navbar({ profile }: { profile: Profile }) {
       }
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.ready
-          .then(reg => reg.active?.postMessage({ type: 'SET_BADGE', count: total }))
+          .then(reg => {
+            const sw = reg.active ?? reg.waiting ?? reg.installing
+            sw?.postMessage({ type: 'SET_BADGE', count: total })
+          })
           .catch(() => {})
       }
     }
@@ -300,8 +306,8 @@ export default function Navbar({ profile }: { profile: Profile }) {
         </div>
       </nav>
 
-      {/* Notification permission prompt — shown once when there are unread messages */}
-      {notifPerm === 'default' && (unreadPrivate + unreadCommunity) > 0 && (
+      {/* Notification permission prompt — shown whenever permission hasn't been granted/denied */}
+      {notifPerm === 'default' && (
         <div className="bg-brand-50 border-b border-brand-100 px-4 py-2 flex items-center justify-between gap-3">
           <p className="text-xs text-brand-800 flex-1">
             Activează notificările pentru a vedea cifra pe iconița aplicației.
