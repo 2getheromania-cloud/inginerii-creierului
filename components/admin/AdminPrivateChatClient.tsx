@@ -59,6 +59,10 @@ function MessageBubble({
     <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
       <div className={`flex flex-col max-w-[80%] md:max-w-[72%] ${isOwn ? 'items-end' : 'items-start'}`}>
 
+        {!isOwn && otherUserName && (
+          <span className="text-xs font-semibold text-brand-700 px-1 mb-0.5">{otherUserName}</span>
+        )}
+
         {/* Bubble */}
         {isEditing ? (
           <div className="bg-white border-2 border-brand-400 rounded-2xl px-4 py-2.5 min-w-[160px]">
