@@ -1,6 +1,7 @@
 import { createClient as supa, SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { waitUntil } from '@vercel/functions'
 
 function service() {
   return supa(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
@@ -163,8 +164,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Smart delayed notification — fire and forget
-  ;(async () => {
+  // Notifications — kept alive after response via waitUntil
+  waitUntil((async () => {
     try {
       const { maybeNotifyPrivateMessage } = await import('@/lib/notifications')
       const { sendPushToUser } = await import('@/lib/push')
@@ -172,45 +173,30 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       const text = content.trim()
       const preview = text.length > 100 ? text.slice(0, 97) + '…' : text
 
-      console.log('[PUSH] sender_id:', user.id, 'isAdmin:', isAdmin)
-      console.log('[PUSH] conv:', JSON.stringify({ a: conv.participant_a_id, b: conv.participant_b_id, user: conv.user_id }))
-
       if (conv.participant_a_id && conv.participant_b_id) {
         const recipientId = conv.participant_a_id === user.id
           ? conv.participant_b_id
           : conv.participant_a_id
-        console.log('[PUSH] new-style → recipient:', recipientId)
         await maybeNotifyPrivateMessage(params.id, recipientId, senderName, text)
-        try {
-          await sendPushToUser(recipientId, { title: senderName, body: preview, url: '/mesaje' })
-          console.log('[PUSH] sent ok to', recipientId)
-        } catch (e) { console.error('[PUSH] send error:', e) }
+        await sendPushToUser(recipientId, { title: senderName, body: preview, url: '/mesaje' })
       } else if (isAdmin) {
         const cursantId = conv.user_id ?? conv.participant_a_id
-        console.log('[PUSH] old-style admin → cursant:', cursantId)
         if (cursantId) {
           await maybeNotifyPrivateMessage(params.id, cursantId, senderName, text)
-          try {
-            await sendPushToUser(cursantId, { title: senderName, body: preview, url: '/mesaje' })
-            console.log('[PUSH] sent ok to', cursantId)
-          } catch (e) { console.error('[PUSH] send error:', e) }
+          await sendPushToUser(cursantId, { title: senderName, body: preview, url: '/mesaje' })
         }
       } else {
         const { data: admins } = await service()
           .from('profiles')
           .select('id')
           .eq('role', 'admin')
-        console.log('[PUSH] old-style cursant → admins:', admins?.map(a => a.id))
         for (const admin of admins ?? []) {
           await maybeNotifyPrivateMessage(params.id, admin.id, senderName, text)
-          try {
-            await sendPushToUser(admin.id, { title: senderName, body: preview, url: '/mesaje' })
-            console.log('[PUSH] sent ok to admin', admin.id)
-          } catch (e) { console.error('[PUSH] send error to admin', admin.id, ':', e) }
+          await sendPushToUser(admin.id, { title: senderName, body: preview, url: '/mesaje' })
         }
       }
-    } catch (e) { console.error('[PUSH] outer error:', e) }
-  })()
+    } catch (e) { console.error('[PUSH] error:', e) }
+  })())
 
   return NextResponse.json(msg)
 }
