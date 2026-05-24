@@ -3,7 +3,7 @@ import { useState } from 'react'
 import type { ChatMessage, ChatReaction } from '@/lib/types'
 import { linkifyText } from '@/lib/linkify'
 
-const REACTION_EMOJIS = ['❤️', '🙏', '😊', '🔥', '👏', '💪', '🌿']
+const REACTION_EMOJIS = ['❤️', '👍', '😊', '😂', '😮', '🙏', '🔥', '👏', '💪', '🌿']
 
 interface Props {
   message: ChatMessage

@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import { linkifyText, isImageUrl } from '@/lib/linkify'
 import type { PrivateMessage, ChatReaction } from '@/lib/types'
 
-const REACTION_EMOJIS = ['❤️', '🙏', '😊', '🔥', '👏', '💪', '🌿']
+const REACTION_EMOJIS = ['❤️', '👍', '😊', '😂', '😮', '🙏', '🔥', '👏', '💪', '🌿']
 
 interface Props {
   conversationId: string
