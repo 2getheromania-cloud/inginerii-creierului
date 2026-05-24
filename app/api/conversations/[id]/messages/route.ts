@@ -167,31 +167,24 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   // Notifications — kept alive after response via waitUntil
   waitUntil((async () => {
     try {
-      const { maybeNotifyPrivateMessage } = await import('@/lib/notifications')
       const { sendPushToUser } = await import('@/lib/push')
       const senderName = senderProfile?.name ?? senderProfile?.email ?? 'Utilizator'
-      const text = content.trim()
-      const preview = text.length > 100 ? text.slice(0, 97) + '…' : text
+      const preview = content.trim().slice(0, 100)
 
       if (conv.participant_a_id && conv.participant_b_id) {
         const recipientId = conv.participant_a_id === user.id
           ? conv.participant_b_id
           : conv.participant_a_id
-        await maybeNotifyPrivateMessage(params.id, recipientId, senderName, text)
         await sendPushToUser(recipientId, { title: senderName, body: preview, url: '/mesaje' })
       } else if (isAdmin) {
         const cursantId = conv.user_id ?? conv.participant_a_id
-        if (cursantId) {
-          await maybeNotifyPrivateMessage(params.id, cursantId, senderName, text)
-          await sendPushToUser(cursantId, { title: senderName, body: preview, url: '/mesaje' })
-        }
+        if (cursantId) await sendPushToUser(cursantId, { title: senderName, body: preview, url: '/mesaje' })
       } else {
         const { data: admins } = await service()
           .from('profiles')
           .select('id')
           .eq('role', 'admin')
         for (const admin of admins ?? []) {
-          await maybeNotifyPrivateMessage(params.id, admin.id, senderName, text)
           await sendPushToUser(admin.id, { title: senderName, body: preview, url: '/mesaje' })
         }
       }
