@@ -36,19 +36,24 @@ export async function sendPushToUser(
   initVapid()
   const json = JSON.stringify({ ...payload, badge })
 
-  await Promise.allSettled(
-    subs.map(async sub => {
-      try {
-        await webPush.sendNotification(
-          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-          json,
-        )
-      } catch (err: unknown) {
-        if ((err as { statusCode?: number }).statusCode === 410) {
-          // Subscription expired — clean up
-          await service().from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
-        }
-      }
-    }),
+  const results = await Promise.allSettled(
+    subs.map(sub =>
+      webPush.sendNotification(
+        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+        json,
+      )
+    ),
   )
+
+  for (let i = 0; i < results.length; i++) {
+    const r = results[i]
+    if (r.status === 'rejected') {
+      const err = r.reason as { statusCode?: number; message?: string }
+      if (err.statusCode === 410) {
+        await service().from('push_subscriptions').delete().eq('endpoint', subs[i].endpoint)
+      } else {
+        throw new Error(`Push failed: ${err.statusCode} ${err.message}`)
+      }
+    }
+  }
 }
