@@ -172,36 +172,44 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       const text = content.trim()
       const preview = text.length > 100 ? text.slice(0, 97) + '…' : text
 
+      console.log('[PUSH] sender_id:', user.id, 'isAdmin:', isAdmin)
+      console.log('[PUSH] conv:', JSON.stringify({ a: conv.participant_a_id, b: conv.participant_b_id, user: conv.user_id }))
+
       if (conv.participant_a_id && conv.participant_b_id) {
-        // New-style: notify the other participant
         const recipientId = conv.participant_a_id === user.id
           ? conv.participant_b_id
           : conv.participant_a_id
-        await Promise.all([
-          maybeNotifyPrivateMessage(params.id, recipientId, senderName, text),
-          sendPushToUser(recipientId, { title: senderName, body: preview, url: '/mesaje' }),
-        ])
+        console.log('[PUSH] new-style → recipient:', recipientId)
+        await maybeNotifyPrivateMessage(params.id, recipientId, senderName, text)
+        try {
+          await sendPushToUser(recipientId, { title: senderName, body: preview, url: '/mesaje' })
+          console.log('[PUSH] sent ok to', recipientId)
+        } catch (e) { console.error('[PUSH] send error:', e) }
       } else if (isAdmin) {
-        // Old-style admin → cursant
         const cursantId = conv.user_id ?? conv.participant_a_id
-        if (cursantId) await Promise.all([
-          maybeNotifyPrivateMessage(params.id, cursantId, senderName, text),
-          sendPushToUser(cursantId, { title: senderName, body: preview, url: '/mesaje' }),
-        ])
+        console.log('[PUSH] old-style admin → cursant:', cursantId)
+        if (cursantId) {
+          await maybeNotifyPrivateMessage(params.id, cursantId, senderName, text)
+          try {
+            await sendPushToUser(cursantId, { title: senderName, body: preview, url: '/mesaje' })
+            console.log('[PUSH] sent ok to', cursantId)
+          } catch (e) { console.error('[PUSH] send error:', e) }
+        }
       } else {
-        // Old-style cursant → all admins
         const { data: admins } = await service()
           .from('profiles')
           .select('id')
           .eq('role', 'admin')
+        console.log('[PUSH] old-style cursant → admins:', admins?.map(a => a.id))
         for (const admin of admins ?? []) {
-          await Promise.all([
-            maybeNotifyPrivateMessage(params.id, admin.id, senderName, text),
-            sendPushToUser(admin.id, { title: senderName, body: preview, url: '/mesaje' }),
-          ])
+          await maybeNotifyPrivateMessage(params.id, admin.id, senderName, text)
+          try {
+            await sendPushToUser(admin.id, { title: senderName, body: preview, url: '/mesaje' })
+            console.log('[PUSH] sent ok to admin', admin.id)
+          } catch (e) { console.error('[PUSH] send error to admin', admin.id, ':', e) }
         }
       }
-    } catch {}
+    } catch (e) { console.error('[PUSH] outer error:', e) }
   })()
 
   return NextResponse.json(msg)
