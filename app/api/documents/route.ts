@@ -1,6 +1,7 @@
 import { createClient as supa } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { waitUntil } from '@vercel/functions'
 
 function service() {
   return supa(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
@@ -87,6 +88,23 @@ export async function POST(req: NextRequest) {
     await service().storage.from('documents').remove([filePath])
     return NextResponse.json({ error: `Baza de date: ${dbErr.message}` }, { status: 500 })
   }
+
+  waitUntil((async () => {
+    try {
+      const { sendPushToUser } = await import('@/lib/push')
+      const title = 'Bibliotecă'
+      const body = `Document nou: ${file.name}`
+      const url = '/biblioteca'
+      if (isGlobal) {
+        const { data: cursants } = await service().from('profiles').select('id').neq('role', 'admin')
+        for (const c of cursants ?? []) {
+          await sendPushToUser(c.id, { title, body, url })
+        }
+      } else if (targetId !== user.id) {
+        await sendPushToUser(targetId, { title: 'Document nou pentru tine', body: file.name, url })
+      }
+    } catch (e) { console.error('[PUSH] document:', e) }
+  })())
 
   return NextResponse.json(doc, { status: 201 })
 }

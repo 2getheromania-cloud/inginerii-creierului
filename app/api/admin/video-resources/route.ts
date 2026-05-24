@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as supa } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { waitUntil } from '@vercel/functions'
 
 function service() {
   return supa(
@@ -48,6 +49,17 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+
+  waitUntil((async () => {
+    try {
+      const { sendPushToUser } = await import('@/lib/push')
+      const { data: cursants } = await service().from('profiles').select('id').neq('role', 'admin')
+      for (const c of cursants ?? []) {
+        await sendPushToUser(c.id, { title: 'Bibliotecă', body: `Video nou: ${body.title}`, url: '/biblioteca' })
+      }
+    } catch (e) { console.error('[PUSH] video:', e) }
+  })())
+
   return NextResponse.json(data)
 }
 
