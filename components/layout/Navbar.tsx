@@ -106,6 +106,7 @@ export default function Navbar({ profile }: { profile: Profile }) {
 
   const [unreadPrivate, setUnreadPrivate]     = useState(0)
   const [unreadCommunity, setUnreadCommunity] = useState(0)
+  const [unreadDocs, setUnreadDocs]           = useState(0)
   const [toasts, setToasts]                   = useState<ToastItem[]>([])
   const [notifPerm, setNotifPerm]             = useState<NotificationPermission | null>(null)
   const [needsPushSub, setNeedsPushSub]       = useState(false)
@@ -209,7 +210,33 @@ export default function Navbar({ profile }: { profile: Profile }) {
       setUnreadCommunity(0)
       fetch('/api/notifications/mark-community-read', { method: 'POST' }).catch(() => {})
     }
+    if (pathname.startsWith('/documente')) {
+      setUnreadDocs(0)
+      localStorage.setItem('docs_last_seen_at', new Date().toISOString())
+    }
   }, [pathname])
+
+  useEffect(() => {
+    if (isAdmin) return
+    const stored = localStorage.getItem('docs_last_seen_at')
+    if (!stored) {
+      // First visit — mark now as baseline so old docs don't show badge
+      localStorage.setItem('docs_last_seen_at', new Date().toISOString())
+      return
+    }
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/documents/new-count?since=${encodeURIComponent(stored)}`)
+        if (!res.ok) return
+        const { count } = await res.json() as { count: number }
+        if (!pathname.startsWith('/documente')) setUnreadDocs(count)
+      } catch {}
+    }
+    poll()
+    const id = setInterval(poll, 30_000)
+    return () => clearInterval(id)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     const total = unreadPrivate + unreadCommunity
@@ -337,8 +364,9 @@ export default function Navbar({ profile }: { profile: Profile }) {
           >
             {nav.map(({ href, label }) => {
               const badge =
-                href === '/mesaje' ? unreadPrivate
-                : href === '/chat'  ? unreadCommunity
+                href === '/mesaje'    ? unreadPrivate
+                : href === '/chat'    ? unreadCommunity
+                : href === '/documente' ? unreadDocs
                 : 0
               const isActive =
                 pathname === href ||
