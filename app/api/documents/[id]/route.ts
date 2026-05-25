@@ -1,6 +1,7 @@
 import { createClient as supa } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { waitUntil } from '@vercel/functions'
 
 function service() {
   return supa(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
@@ -60,6 +61,20 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  if (body.is_global) {
+    waitUntil((async () => {
+      try {
+        const { sendPushToUser } = await import('@/lib/push')
+        const docName = (data as { name?: string }).name ?? 'document'
+        const { data: cursants } = await service().from('profiles').select('id').neq('role', 'admin')
+        for (const c of cursants ?? []) {
+          await sendPushToUser(c.id, { title: 'Bibliotecă', body: `Document nou: ${docName}`, url: '/biblioteca' })
+        }
+      } catch (e) { console.error('[PUSH] distribute:', e) }
+    })())
+  }
+
   return NextResponse.json(data)
 }
 
