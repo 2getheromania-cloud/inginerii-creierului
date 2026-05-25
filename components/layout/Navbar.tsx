@@ -212,24 +212,33 @@ export default function Navbar({ profile }: { profile: Profile }) {
     }
     if (pathname.startsWith('/documente')) {
       setUnreadDocs(0)
-      localStorage.setItem('docs_last_seen_at', new Date().toISOString())
+      // Store current total as baseline when user visits the page
+      fetch('/api/documents/new-count')
+        .then(r => r.ok ? r.json() : null)
+        .then((d: { count: number } | null) => {
+          if (d) localStorage.setItem('docs_global_count', String(d.count))
+        })
+        .catch(() => {})
     }
   }, [pathname])
 
   useEffect(() => {
     if (isAdmin) return
-    const stored = localStorage.getItem('docs_last_seen_at')
-    if (!stored) {
-      // First visit — mark now as baseline so old docs don't show badge
-      localStorage.setItem('docs_last_seen_at', new Date().toISOString())
-      return
-    }
     const poll = async () => {
       try {
-        const res = await fetch(`/api/documents/new-count?since=${encodeURIComponent(stored)}`)
+        const res = await fetch('/api/documents/new-count')
         if (!res.ok) return
-        const { count } = await res.json() as { count: number }
-        if (!pathname.startsWith('/documente')) setUnreadDocs(count)
+        const { count: total } = await res.json() as { count: number }
+        const stored = parseInt(localStorage.getItem('docs_global_count') ?? String(total), 10)
+        if (isNaN(stored)) {
+          localStorage.setItem('docs_global_count', String(total))
+          return
+        }
+        if (total > stored && !window.location.pathname.startsWith('/documente')) {
+          setUnreadDocs(total - stored)
+        } else if (total <= stored) {
+          setUnreadDocs(0)
+        }
       } catch {}
     }
     poll()
