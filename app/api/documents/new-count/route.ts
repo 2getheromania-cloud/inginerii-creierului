@@ -6,7 +6,8 @@ function service() {
   return supa(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 }
 
-// Returns total count of global documents — client compares with last-seen count in localStorage
+// Returns total count of documents visible to this cursant (global + personal).
+// Client compares with last-seen count stored in localStorage to show badge.
 export async function GET() {
   const authClient = createClient()
   const { data: { user } } = await authClient.auth.getUser()
@@ -18,7 +19,7 @@ export async function GET() {
   const { count } = await service()
     .from('documents')
     .select('id', { count: 'exact', head: true })
-    .eq('is_global', true)
+    .or(`is_global.eq.true,user_id.eq.${user.id}`)
 
   return NextResponse.json({ count: count ?? 0 })
 }

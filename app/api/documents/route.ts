@@ -92,16 +92,13 @@ export async function POST(req: NextRequest) {
   waitUntil((async () => {
     try {
       const { sendPushToUser } = await import('@/lib/push')
-      const title = 'Bibliotecă'
-      const body = `Document nou: ${file.name}`
-      const url = '/biblioteca'
       if (isGlobal) {
         const { data: cursants } = await service().from('profiles').select('id').neq('role', 'admin')
         for (const c of cursants ?? []) {
-          await sendPushToUser(c.id, { title, body, url })
+          await sendPushToUser(c.id, { title: 'Bibliotecă', body: `Document nou: ${file.name}`, url: '/documente' })
         }
       } else if (targetId !== user.id) {
-        await sendPushToUser(targetId, { title: 'Document nou pentru tine', body: file.name, url })
+        await sendPushToUser(targetId, { title: 'Document nou pentru tine', body: file.name, url: '/documente' })
       }
     } catch (e) { console.error('[PUSH] document:', e) }
   })())

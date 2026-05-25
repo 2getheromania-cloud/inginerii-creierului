@@ -69,7 +69,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         const docName = (data as { name?: string }).name ?? 'document'
         const { data: cursants } = await service().from('profiles').select('id').neq('role', 'admin')
         for (const c of cursants ?? []) {
-          await sendPushToUser(c.id, { title: 'Bibliotecă', body: `Document nou: ${docName}`, url: '/biblioteca' })
+          await sendPushToUser(c.id, { title: 'Bibliotecă', body: `Document nou: ${docName}`, url: '/documente' })
         }
       } catch (e) { console.error('[PUSH] distribute:', e) }
     })())
