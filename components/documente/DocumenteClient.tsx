@@ -335,7 +335,7 @@ export default function DocumenteClient({ userId, isAdmin, targetUserId, cursant
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                 </svg>
-                {showLinkForm ? 'Anulează' : 'Adaugă link Google Drive pentru cursant'}
+                {showLinkForm ? 'Anulează' : 'Adaugă link pentru cursant'}
               </button>
 
               {showLinkForm && (
@@ -364,7 +364,7 @@ export default function DocumenteClient({ userId, isAdmin, targetUserId, cursant
                   />
                   <input
                     type="url"
-                    placeholder="URL Google Drive (https://drive.google.com/...)"
+                    placeholder="URL (https://drive.google.com/... sau orice alt link)"
                     value={linkUrl}
                     onChange={e => setLinkUrl(e.target.value)}
                     className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-300"
@@ -400,7 +400,7 @@ export default function DocumenteClient({ userId, isAdmin, targetUserId, cursant
                       )}
                       {doc.file_path?.startsWith('http') && (
                         <span className="flex-shrink-0 text-[10px] font-semibold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
-                          Link
+                          {doc.file_path.includes('drive.google.com') ? 'Drive' : 'Link'}
                         </span>
                       )}
                     </div>
