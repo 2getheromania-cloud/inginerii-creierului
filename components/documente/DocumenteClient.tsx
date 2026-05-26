@@ -416,14 +416,8 @@ export default function DocumenteClient({ userId, isAdmin, targetUserId, cursant
                   {doc.file_path?.startsWith('http') ? (
                     <a
                       href={doc.file_path}
+                      target="_blank"
                       rel="noopener noreferrer"
-                      onClick={(e) => {
-                        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true
-                        if (!isStandalone) {
-                          e.preventDefault()
-                          window.open(doc.file_path, '_blank', 'noopener,noreferrer')
-                        }
-                      }}
                       className="btn-secondary text-xs py-1 px-3"
                     >
                       Deschide
