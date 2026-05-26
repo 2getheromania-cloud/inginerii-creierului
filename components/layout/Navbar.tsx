@@ -124,14 +124,14 @@ export default function Navbar({ profile }: { profile: Profile }) {
         .then(async reg => {
           const existing = await reg.pushManager.getSubscription()
           if (existing) {
-            // Re-save existing subscription — no user gesture needed
-            await fetch('/api/push/subscribe', {
+            // Re-save to DB — if it fails the subscription is stale, prompt re-subscribe
+            const result = await fetch('/api/push/subscribe', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(existing.toJSON()),
-            }).catch(() => {})
+            }).catch(() => null)
+            if (!result || !result.ok) setNeedsPushSub(true)
           } else {
-            // No subscription yet — need a user gesture on iOS to create one
             setNeedsPushSub(true)
           }
         })
@@ -248,7 +248,7 @@ export default function Navbar({ profile }: { profile: Profile }) {
   }, [])
 
   useEffect(() => {
-    const total = unreadPrivate + unreadCommunity
+    const total = unreadPrivate + unreadCommunity + unreadDocs
     if ('setAppBadge' in navigator) {
       if (total > 0) navigator.setAppBadge(total).catch(() => {})
       else navigator.clearAppBadge().catch(() => {})
@@ -264,14 +264,13 @@ export default function Navbar({ profile }: { profile: Profile }) {
   }, [unreadPrivate, unreadCommunity])
 
   async function subscribePush(reg: ServiceWorkerRegistration) {
-    // Fetch VAPID key at runtime so it's not baked into the client bundle
     const kvRes = await fetch('/api/push/vapid-key')
     if (!kvRes.ok) throw new Error(`VAPID_FETCH_${kvRes.status}`)
     const { key: vapidKey } = await kvRes.json() as { key?: string }
     if (!vapidKey) throw new Error('VAPID_KEY_EMPTY')
 
-    const existing = await reg.pushManager.getSubscription()
-    const sub = existing ?? await reg.pushManager.subscribe({
+    // Always create a fresh subscription (stale one was unsubscribed before this call)
+    const sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(vapidKey),
     })
@@ -294,6 +293,9 @@ export default function Navbar({ profile }: { profile: Profile }) {
     }
     try {
       const reg = await navigator.serviceWorker.ready
+      // Force-unsubscribe any stale subscription before creating a fresh one
+      const stale = await reg.pushManager.getSubscription()
+      if (stale) await stale.unsubscribe().catch(() => {})
       await subscribePush(reg)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
@@ -306,7 +308,7 @@ export default function Navbar({ profile }: { profile: Profile }) {
     const result = await Notification.requestPermission()
     setNotifPerm(result)
     if (result === 'granted') {
-      const total = unreadPrivate + unreadCommunity
+      const total = unreadPrivate + unreadCommunity + unreadDocs
       if ('setAppBadge' in navigator) {
         if (total > 0) navigator.setAppBadge(total).catch(() => {})
       }
