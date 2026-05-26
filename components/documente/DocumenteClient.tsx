@@ -2,10 +2,17 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { Document } from '@/lib/types'
 
+interface Cursant {
+  id: string
+  name: string | null
+  email: string
+}
+
 interface Props {
   userId: string
   isAdmin: boolean
   targetUserId?: string
+  cursanti?: Cursant[]
 }
 
 interface Preview {
@@ -129,7 +136,7 @@ function PreviewModal({ preview, onClose, onSetError }: { preview: Preview; onCl
   )
 }
 
-export default function DocumenteClient({ userId, isAdmin, targetUserId }: Props) {
+export default function DocumenteClient({ userId, isAdmin, targetUserId, cursanti = [] }: Props) {
   const [documents, setDocuments] = useState<Document[]>([])
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -137,6 +144,13 @@ export default function DocumenteClient({ userId, isAdmin, targetUserId }: Props
   const [preview, setPreview] = useState<Preview | null>(null)
   const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  const [linkName, setLinkName] = useState('')
+  const [linkUrl, setLinkUrl] = useState('')
+  const [linkUserId, setLinkUserId] = useState('')
+  const [linkSaving, setLinkSaving] = useState(false)
+  const [linkError, setLinkError] = useState<string | null>(null)
+  const [showLinkForm, setShowLinkForm] = useState(false)
 
   const targetId = targetUserId ?? userId
   const showGlobalControls = isAdmin && !targetUserId
@@ -150,6 +164,10 @@ export default function DocumenteClient({ userId, isAdmin, targetUserId }: Props
   }, [targetId, userId])
 
   const handlePreview = useCallback(async (doc: Document) => {
+    if (doc.file_path?.startsWith('http')) {
+      window.open(doc.file_path, '_blank', 'noopener,noreferrer')
+      return
+    }
     setLoadingPreviewId(doc.id)
     try {
       const res = await fetch(`/api/documents/${doc.id}`)
@@ -243,6 +261,30 @@ export default function DocumenteClient({ userId, isAdmin, targetUserId }: Props
     }
   }
 
+  async function handleSaveLink(e: React.FormEvent) {
+    e.preventDefault()
+    setLinkError(null)
+    if (!linkUserId) { setLinkError('Selectează un cursant.'); return }
+    if (!linkName.trim()) { setLinkError('Introduceți un nume.'); return }
+    if (!linkUrl.trim()) { setLinkError('Introduceți un URL.'); return }
+    setLinkSaving(true)
+    try {
+      const res = await fetch('/api/documents/link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: linkUserId, name: linkName.trim(), url: linkUrl.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setLinkError(data.error ?? 'Eroare.'); return }
+      setDocuments(prev => [data as Document, ...prev])
+      setLinkName(''); setLinkUrl(''); setLinkUserId(''); setShowLinkForm(false)
+    } catch {
+      setLinkError('Eroare de rețea.')
+    } finally {
+      setLinkSaving(false)
+    }
+  }
+
   return (
     <>
       {preview && <PreviewModal preview={preview} onClose={() => setPreview(null)} onSetError={setPreview} />}
@@ -282,6 +324,62 @@ export default function DocumenteClient({ userId, isAdmin, targetUserId }: Props
               <span className="text-sm text-gray-600">Vizibil tuturor cursanților</span>
             </label>
           )}
+
+          {showGlobalControls && cursanti.length > 0 && (
+            <div className="pt-2 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => { setShowLinkForm(v => !v); setLinkError(null) }}
+                className="text-sm text-brand-600 hover:text-brand-800 font-medium flex items-center gap-1"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+                {showLinkForm ? 'Anulează' : 'Adaugă link Google Drive pentru cursant'}
+              </button>
+
+              {showLinkForm && (
+                <form onSubmit={handleSaveLink} className="mt-3 space-y-2">
+                  {linkError && (
+                    <p className="text-xs text-red-600">{linkError}</p>
+                  )}
+                  <select
+                    value={linkUserId}
+                    onChange={e => setLinkUserId(e.target.value)}
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand-300"
+                  >
+                    <option value="">— Selectează cursant —</option>
+                    {cursanti.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.name || c.email}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="Nume document (ex: Plan personalizat)"
+                    value={linkName}
+                    onChange={e => setLinkName(e.target.value)}
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-300"
+                  />
+                  <input
+                    type="url"
+                    placeholder="URL Google Drive (https://drive.google.com/...)"
+                    value={linkUrl}
+                    onChange={e => setLinkUrl(e.target.value)}
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-300"
+                  />
+                  <button
+                    type="submit"
+                    disabled={linkSaving}
+                    className="btn-primary text-sm py-1.5"
+                  >
+                    {linkSaving ? 'Se salvează...' : 'Trimite link cursantului'}
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
         </div>
 
         {documents.length === 0 ? (
@@ -300,6 +398,11 @@ export default function DocumenteClient({ userId, isAdmin, targetUserId }: Props
                           Global
                         </span>
                       )}
+                      {doc.file_path?.startsWith('http') && (
+                        <span className="flex-shrink-0 text-[10px] font-semibold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
+                          Link
+                        </span>
+                      )}
                     </div>
                     <p className="text-xs text-gray-400 whitespace-nowrap mt-0.5">
                       {doc.size_bytes ? fmtSize(doc.size_bytes) : ''}
@@ -315,11 +418,13 @@ export default function DocumenteClient({ userId, isAdmin, targetUserId }: Props
                     disabled={loadingPreviewId === doc.id}
                     className="btn-secondary text-xs py-1 px-3"
                   >
-                    {loadingPreviewId === doc.id ? '...' : 'Vizualizează'}
+                    {loadingPreviewId === doc.id ? '...' : doc.file_path?.startsWith('http') ? 'Deschide' : 'Vizualizează'}
                   </button>
-                  <button onClick={() => handleDownload(doc)} className="btn-secondary text-xs py-1 px-3">
-                    Descarcă
-                  </button>
+                  {!doc.file_path?.startsWith('http') && (
+                    <button onClick={() => handleDownload(doc)} className="btn-secondary text-xs py-1 px-3">
+                      Descarcă
+                    </button>
+                  )}
                   {showGlobalControls && (
                     <button
                       onClick={() => handleToggleGlobal(doc)}

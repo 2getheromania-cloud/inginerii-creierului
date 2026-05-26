@@ -27,6 +27,10 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const doc = await getDocAndCheck(params.id, user.id, isAdmin)
   if (!doc) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
+  if ((doc.file_path as string).startsWith('http')) {
+    return NextResponse.json({ url: doc.file_path })
+  }
+
   const { data, error } = await service()
     .storage
     .from('documents')
