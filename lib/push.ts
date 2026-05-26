@@ -50,8 +50,8 @@ export async function sendPushToUser(
     const r = results[i]
     if (r.status === 'rejected') {
       const err = r.reason as { statusCode?: number; message?: string }
-      if (err.statusCode === 410 || err.statusCode === 403) {
-        // 410 = expired, 403 = wrong VAPID key — both mean subscription is invalid
+      if (err.statusCode === 410 || err.statusCode === 403 || err.statusCode === 400) {
+        // 410 = expired, 403/400 = wrong VAPID key or invalid subscription
         await service().from('push_subscriptions').delete().eq('endpoint', subs[i].endpoint)
       } else {
         throw new Error(`Push failed: ${err.statusCode} ${err.message}`)
