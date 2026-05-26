@@ -17,6 +17,7 @@ export default function PushSettings() {
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const [supported, setSupported] = useState(true)
+  const [testing, setTesting] = useState(false)
 
   useEffect(() => {
     if (typeof Notification === 'undefined') { setSupported(false); setPerm('indisponibil'); return }
@@ -83,6 +84,24 @@ export default function PushSettings() {
     }
   }
 
+  async function handleTest() {
+    setTesting(true)
+    setMsg(null)
+    try {
+      const res = await fetch('/api/push/test', { method: 'POST' })
+      const d = await res.json().catch(() => ({})) as { ok?: boolean; error?: string }
+      if (res.ok && d.ok) {
+        setMsg('Notificare test trimisă! Ar trebui să apară în câteva secunde.')
+      } else {
+        setMsg(`Eroare server: ${d.error ?? res.status}`)
+      }
+    } catch (e) {
+      setMsg(`Eroare: ${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setTesting(false)
+    }
+  }
+
   const statusColor = inDb ? 'text-green-700 bg-green-50 border-green-200' : 'text-red-700 bg-red-50 border-red-200'
   const statusText = !supported
     ? 'Browserul/aplicația nu suportă push notifications. Folosește aplicația instalată (PWA) pe iOS/Android.'
@@ -109,13 +128,24 @@ export default function PushSettings() {
       </div>
 
       {supported && perm !== 'denied' && (
-        <button
-          onClick={handleActivate}
-          disabled={loading || inDb === true}
-          className="btn-primary disabled:opacity-50"
-        >
-          {loading ? 'Se activează...' : inDb ? 'Deja activ' : 'Activează notificările push'}
-        </button>
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={handleActivate}
+            disabled={loading || inDb === true}
+            className="btn-primary disabled:opacity-50"
+          >
+            {loading ? 'Se activează...' : inDb ? 'Deja activ' : 'Activează notificările push'}
+          </button>
+          {inDb && (
+            <button
+              onClick={handleTest}
+              disabled={testing}
+              className="btn-secondary disabled:opacity-50"
+            >
+              {testing ? 'Se trimite...' : 'Testează'}
+            </button>
+          )}
+        </div>
       )}
 
       {msg && (
