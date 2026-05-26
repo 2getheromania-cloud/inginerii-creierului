@@ -124,13 +124,22 @@ export default function Navbar({ profile }: { profile: Profile }) {
         .then(async reg => {
           const existing = await reg.pushManager.getSubscription()
           if (existing) {
-            // Re-save to DB — if it fails the subscription is stale, prompt re-subscribe
-            const result = await fetch('/api/push/subscribe', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(existing.toJSON()),
-            }).catch(() => null)
-            if (!result || !result.ok) setNeedsPushSub(true)
+            // Check if this endpoint is still in DB (gets deleted when push returns 410)
+            const checkRes = await fetch(
+              `/api/push/check?endpoint=${encodeURIComponent(existing.endpoint)}`
+            ).catch(() => null)
+            const { found } = (await checkRes?.json().catch(() => ({}))) as { found?: boolean }
+            if (found) {
+              // Still valid — re-save to keep fresh (handles server restarts, DB resets)
+              await fetch('/api/push/subscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(existing.toJSON()),
+              }).catch(() => {})
+            } else {
+              // Deleted from DB (expired 410) — prompt re-subscribe
+              setNeedsPushSub(true)
+            }
           } else {
             setNeedsPushSub(true)
           }
