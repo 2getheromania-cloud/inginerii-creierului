@@ -413,13 +413,30 @@ export default function DocumenteClient({ userId, isAdmin, targetUserId, cursant
                 </div>
                 {/* Action buttons — own row, never overlap name */}
                 <div className="flex gap-2 flex-wrap">
-                  <button
-                    onClick={() => handlePreview(doc)}
-                    disabled={loadingPreviewId === doc.id}
-                    className="btn-secondary text-xs py-1 px-3"
-                  >
-                    {loadingPreviewId === doc.id ? '...' : doc.file_path?.startsWith('http') ? 'Deschide' : 'Vizualizează'}
-                  </button>
+                  {doc.file_path?.startsWith('http') ? (
+                    <a
+                      href={doc.file_path}
+                      rel="noopener noreferrer"
+                      onClick={(e) => {
+                        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true
+                        if (!isStandalone) {
+                          e.preventDefault()
+                          window.open(doc.file_path, '_blank', 'noopener,noreferrer')
+                        }
+                      }}
+                      className="btn-secondary text-xs py-1 px-3"
+                    >
+                      Deschide
+                    </a>
+                  ) : (
+                    <button
+                      onClick={() => handlePreview(doc)}
+                      disabled={loadingPreviewId === doc.id}
+                      className="btn-secondary text-xs py-1 px-3"
+                    >
+                      {loadingPreviewId === doc.id ? '...' : 'Vizualizează'}
+                    </button>
+                  )}
                   {!doc.file_path?.startsWith('http') && (
                     <button onClick={() => handleDownload(doc)} className="btn-secondary text-xs py-1 px-3">
                       Descarcă

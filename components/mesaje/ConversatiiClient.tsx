@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import AdminPrivateChatClient from '@/components/admin/AdminPrivateChatClient'
 
 interface UserItem {
@@ -28,10 +28,12 @@ function Avatar({ name, role }: { name: string; role: string }) {
 function UserRow({
   u,
   isSelected,
+  unread,
   onClick,
 }: {
   u: UserItem
   isSelected: boolean
+  unread: number
   onClick: () => void
 }) {
   return (
@@ -55,10 +57,17 @@ function UserRow({
         </div>
         <p className="text-xs text-gray-400 truncate">{u.email}</p>
       </div>
-      {/* Chevron hint on mobile */}
-      <svg className="w-4 h-4 text-gray-300 flex-shrink-0 md:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-      </svg>
+      {unread > 0 && (
+        <span className="flex-shrink-0 min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+          {unread > 99 ? '99+' : unread}
+        </span>
+      )}
+      {/* Chevron hint on mobile (hidden when badge present to avoid clutter) */}
+      {unread === 0 && (
+        <svg className="w-4 h-4 text-gray-300 flex-shrink-0 md:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      )}
     </button>
   )
 }
@@ -69,7 +78,21 @@ export default function ConversatiiClient({ users, currentUserId, currentUserRol
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list')
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({})
   const autoOpenDone = useRef(false)
+
+  const fetchUnread = useCallback(async () => {
+    const res = await fetch('/api/conversations/unread-counts').catch(() => null)
+    if (!res?.ok) return
+    const data = await res.json().catch(() => ({})) as Record<string, number>
+    setUnreadCounts(data)
+  }, [])
+
+  useEffect(() => {
+    fetchUnread()
+    const id = setInterval(fetchUnread, 10_000)
+    return () => clearInterval(id)
+  }, [fetchUnread])
 
 
   const q = search.toLowerCase()
@@ -118,9 +141,10 @@ export default function ConversatiiClient({ users, currentUserId, currentUserRol
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Persist last-opened user so we can auto-open on next visit
+  // Persist last-opened user and clear their unread badge
   function selectAndRemember(u: UserItem) {
     try { localStorage.setItem('lastPrivateChatUserId', u.id) } catch {}
+    setUnreadCounts(prev => { const next = { ...prev }; delete next[u.id]; return next })
     handleSelect(u)
   }
 
@@ -155,7 +179,7 @@ export default function ConversatiiClient({ users, currentUserId, currentUserRol
                     Admini
                   </p>
                   {admins.map(u => (
-                    <UserRow key={u.id} u={u} isSelected={selected?.id === u.id} onClick={() => selectAndRemember(u)} />
+                    <UserRow key={u.id} u={u} isSelected={selected?.id === u.id} unread={unreadCounts[u.id] ?? 0} onClick={() => selectAndRemember(u)} />
                   ))}
                 </>
               )}
@@ -165,14 +189,14 @@ export default function ConversatiiClient({ users, currentUserId, currentUserRol
                     Cursanți
                   </p>
                   {cursanti.map(u => (
-                    <UserRow key={u.id} u={u} isSelected={selected?.id === u.id} onClick={() => selectAndRemember(u)} />
+                    <UserRow key={u.id} u={u} isSelected={selected?.id === u.id} unread={unreadCounts[u.id] ?? 0} onClick={() => selectAndRemember(u)} />
                   ))}
                 </>
               )}
             </>
           ) : (
             filtered.map(u => (
-              <UserRow key={u.id} u={u} isSelected={selected?.id === u.id} onClick={() => selectAndRemember(u)} />
+              <UserRow key={u.id} u={u} isSelected={selected?.id === u.id} unread={unreadCounts[u.id] ?? 0} onClick={() => selectAndRemember(u)} />
             ))
           )}
           {filtered.length === 0 && (
