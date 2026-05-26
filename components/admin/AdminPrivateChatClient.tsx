@@ -272,24 +272,38 @@ export default function AdminPrivateChatClient({ conversationId, currentUserId }
     fetch(`/api/conversations/${conversationId}/messages`, { method: 'PATCH' }).catch(() => {})
   }
 
+  const mergeMessages = useCallback((data: PrivateMessage[]) => {
+    setMessages(prev => {
+      const prevMap = new Map(prev.map(m => [m.id, m]))
+      const byId = new Map<string, PrivateMessage>(data.map(m => [m.id, {
+        ...m,
+        reactions: prevMap.get(m.id)?.reactions ?? m.reactions ?? [],
+      } as PrivateMessage]))
+      // Keep non-optimistic prev messages not in fresh data
+      for (const m of prev) if (!byId.has(m.id) && !m.id.startsWith('tmp-')) byId.set(m.id, m)
+      // Keep optimistic messages only if no real counterpart arrived
+      for (const m of prev) {
+        if (m.id.startsWith('tmp-') && !data.some(r => r.sender_id === m.sender_id && r.content === m.content))
+          byId.set(m.id, m)
+      }
+      return Array.from(byId.values()).sort((a, b) => a.created_at < b.created_at ? -1 : 1)
+    })
+  }, [])
+
+  const fetchMessages = useCallback(async () => {
+    const r = await fetch(`/api/conversations/${conversationId}/messages`).catch(() => null)
+    if (!r?.ok) return
+    const data: PrivateMessage[] = await r.json()
+    mergeMessages(data)
+  }, [conversationId, mergeMessages])
+
   useEffect(() => {
     markRead()
-    fetch(`/api/conversations/${conversationId}/messages`)
-      .then(async r => {
-        if (!r.ok) return
-        const data: PrivateMessage[] = await r.json()
-        setMessages(prev => {
-          const prevMap = new Map(prev.map(m => [m.id, m]))
-          const byId = new Map<string, PrivateMessage>(data.map(m => [m.id, {
-            ...m,
-            reactions: prevMap.get(m.id)?.reactions ?? m.reactions ?? [],
-          } as PrivateMessage]))
-          for (const m of prev) if (!byId.has(m.id)) byId.set(m.id, m)
-          return Array.from(byId.values()).sort((a, b) => a.created_at < b.created_at ? -1 : 1)
-        })
-        setTimeout(() => scrollToBottom(false), 50)
-      })
-      .catch(() => {})
+    fetchMessages().then(() => setTimeout(() => scrollToBottom(false), 50))
+
+    // Polling fallback — ensures messages appear even when Realtime disconnects
+    const pollId = setInterval(fetchMessages, 15_000)
+
 
     const channel = supabase
       .channel(`admin-conv:${conversationId}`)
@@ -317,8 +331,8 @@ export default function AdminPrivateChatClient({ conversationId, currentUserId }
       })
       .subscribe()
 
-    return () => { supabase.removeChannel(channel) }
-  }, [conversationId])
+    return () => { supabase.removeChannel(channel); clearInterval(pollId) }
+  }, [conversationId, fetchMessages])
 
   function autoResize() {
     const el = textareaRef.current

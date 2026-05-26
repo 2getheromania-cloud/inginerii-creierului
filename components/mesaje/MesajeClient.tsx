@@ -231,24 +231,27 @@ export default function MesajeClient({ conversationId, userId }: Props) {
     fetch(`/api/conversations/${conversationId}/messages`, { method: 'PATCH' }).catch(() => {})
   }
 
+  const fetchMessages = useCallback(async () => {
+    const r = await fetch(`/api/conversations/${conversationId}/messages`).catch(() => null)
+    if (!r?.ok) return
+    const data: PrivateMessage[] = await r.json()
+    setMessages(prev => {
+      const prevMap = new Map(prev.map(m => [m.id, m]))
+      const byId = new Map<string, PrivateMessage>(data.map(m => [m.id, {
+        ...m,
+        reactions: prevMap.get(m.id)?.reactions ?? m.reactions ?? [],
+      } as PrivateMessage]))
+      for (const m of prev) if (!byId.has(m.id)) byId.set(m.id, m)
+      return Array.from(byId.values()).sort((a, b) => a.created_at < b.created_at ? -1 : 1)
+    })
+  }, [conversationId])
+
   useEffect(() => {
     markRead()
-    fetch(`/api/conversations/${conversationId}/messages`)
-      .then(async r => {
-        if (!r.ok) return
-        const data: PrivateMessage[] = await r.json()
-        setMessages(prev => {
-          const prevMap = new Map(prev.map(m => [m.id, m]))
-          const byId = new Map<string, PrivateMessage>(data.map(m => [m.id, {
-            ...m,
-            reactions: prevMap.get(m.id)?.reactions ?? m.reactions ?? [],
-          } as PrivateMessage]))
-          for (const m of prev) if (!byId.has(m.id)) byId.set(m.id, m)
-          return Array.from(byId.values()).sort((a, b) => a.created_at < b.created_at ? -1 : 1)
-        })
-        setTimeout(scrollToBottom, 50)
-      })
-      .catch(() => {})
+    fetchMessages().then(() => setTimeout(scrollToBottom, 50))
+
+    const pollId = setInterval(fetchMessages, 15_000)
+
 
     const channel = supabase
       .channel(`conv:${conversationId}`)
@@ -273,8 +276,8 @@ export default function MesajeClient({ conversationId, userId }: Props) {
       })
       .subscribe()
 
-    return () => { supabase.removeChannel(channel) }
-  }, [conversationId])
+    return () => { supabase.removeChannel(channel); clearInterval(pollId) }
+  }, [conversationId, fetchMessages])
 
   const handleReact = useCallback(async (msgId: string, emoji: string) => {
     const applyToggle = (msgs: PrivateMessage[]) => msgs.map(m => {
