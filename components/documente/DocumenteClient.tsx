@@ -276,8 +276,8 @@ export default function DocumenteClient({ userId, isAdmin, targetUserId, cursant
       })
       const data = await res.json()
       if (!res.ok) { setLinkError(data.error ?? 'Eroare.'); return }
-      setDocuments(prev => [data as Document, ...prev])
       setLinkName(''); setLinkUrl(''); setLinkUserId(''); setShowLinkForm(false)
+      setLinkError('✓ Link trimis cursantului.')
     } catch {
       setLinkError('Eroare de rețea.')
     } finally {
@@ -341,7 +341,7 @@ export default function DocumenteClient({ userId, isAdmin, targetUserId, cursant
               {showLinkForm && (
                 <form onSubmit={handleSaveLink} className="mt-3 space-y-2">
                   {linkError && (
-                    <p className="text-xs text-red-600">{linkError}</p>
+                    <p className={`text-xs ${linkError.startsWith('✓') ? 'text-green-600' : 'text-red-600'}`}>{linkError}</p>
                   )}
                   <select
                     value={linkUserId}
