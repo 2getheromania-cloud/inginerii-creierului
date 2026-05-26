@@ -131,10 +131,10 @@ export default function PushSettings() {
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={handleActivate}
-            disabled={loading || inDb === true}
+            disabled={loading || (inDb === true && !msg?.includes('403') && !msg?.includes('Eroare'))}
             className="btn-primary disabled:opacity-50"
           >
-            {loading ? 'Se activează...' : inDb ? 'Deja activ' : 'Activează notificările push'}
+            {loading ? 'Se activează...' : (inDb && !msg?.includes('403') && !msg?.includes('Eroare')) ? 'Deja activ' : 'Activează / Re-activează'}
           </button>
           {inDb && (
             <button
