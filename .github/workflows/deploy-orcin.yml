@@ -1,0 +1,24 @@
+name: Deploy orcin (82c5)
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Vercel deployment for inginerii-creierului-82c5
+        run: |
+          curl -sf -X POST \
+            "https://api.vercel.com/v13/deployments?teamId=team_y8KfFkAxU1uJhS0gZQ6bf8J6" \
+            -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "name": "inginerii-creierului-82c5",
+              "project": "prj_DnjkGSBAB6CuMCHyHchMgIftigs6",
+              "target": "production",
+              "gitSource": {
+                "type": "github",
+                "repoId": "1243719184",
+                "ref": "main"
+              }
+            }'

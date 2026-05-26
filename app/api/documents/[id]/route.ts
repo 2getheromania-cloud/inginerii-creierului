@@ -37,6 +37,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     .createSignedUrl(doc.file_path, 3600)
 
   if (error || !data?.signedUrl) {
+    console.error('[storage] createSignedUrl failed:', error?.message, 'path:', doc.file_path)
     return NextResponse.json({ error: 'Nu s-a putut genera link-ul.' }, { status: 500 })
   }
 
