@@ -5,7 +5,7 @@ function service() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 }
 
-const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY ?? 'BLl6oLlrGS4a_uKuda93fWYdLgKB6PvKjNLZd1pTfjLBM2eksPM6631gxAPvVD3vOU_5rIr2uY6oJ7VaJlLjaVQ'
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY ?? 'BAWhOjm9knU0dWmj-lxm_JZyguNRDDT8mTcziNI2Nk_Rj6KgX4iSbxx6iyTuyz-UaPgU7xoq-h6ZS5SDu4U7D_M'
 const VAPID_SUBJECT = 'mailto:2getheromania@gmail.com'
 
 function initVapid() {
