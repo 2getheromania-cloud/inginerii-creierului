@@ -166,35 +166,44 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   // Notifications — kept alive after response via waitUntil
   waitUntil((async () => {
-    try {
-      const { sendPushToUser } = await import('@/lib/push')
-      const { maybeNotifyPrivateMessage } = await import('@/lib/notifications')
-      const senderName = senderProfile?.name ?? senderProfile?.email ?? 'Utilizator'
-      const preview = content.trim().slice(0, 100)
+    const { sendPushToUser } = await import('@/lib/push')
+    const { maybeNotifyPrivateMessage } = await import('@/lib/notifications')
+    const senderName = senderProfile?.name ?? senderProfile?.email ?? 'Utilizator'
+    const preview = content.trim().slice(0, 100)
 
+    async function notifyRecipient(recipientId: string) {
+      try {
+        await sendPushToUser(recipientId, { title: senderName, body: preview, url: '/mesaje' })
+      } catch (e) { console.error('[PUSH] sendPush error:', e) }
+      try {
+        await maybeNotifyPrivateMessage(params.id, recipientId, senderName, preview)
+      } catch (e) { console.error('[PUSH] email fallback error:', e) }
+    }
+
+    try {
       if (conv.participant_a_id && conv.participant_b_id) {
         const recipientId = conv.participant_a_id === user.id
           ? conv.participant_b_id
           : conv.participant_a_id
-        await sendPushToUser(recipientId, { title: senderName, body: preview, url: '/mesaje' })
-        await maybeNotifyPrivateMessage(params.id, recipientId, senderName, preview)
+        console.log(`[PUSH] new-style conv, notifying recipientId=${recipientId}`)
+        await notifyRecipient(recipientId)
       } else if (isAdmin) {
         const cursantId = conv.user_id ?? conv.participant_a_id
         if (cursantId) {
-          await sendPushToUser(cursantId, { title: senderName, body: preview, url: '/mesaje' })
-          await maybeNotifyPrivateMessage(params.id, cursantId, senderName, preview)
+          console.log(`[PUSH] old-style conv, admin sends, notifying cursantId=${cursantId}`)
+          await notifyRecipient(cursantId)
         }
       } else {
         const { data: admins } = await service()
           .from('profiles')
           .select('id')
           .eq('role', 'admin')
+        console.log(`[PUSH] old-style conv, cursant sends, notifying ${admins?.length ?? 0} admins`)
         for (const admin of admins ?? []) {
-          await sendPushToUser(admin.id, { title: senderName, body: preview, url: '/mesaje' })
-          await maybeNotifyPrivateMessage(params.id, admin.id, senderName, preview)
+          await notifyRecipient(admin.id)
         }
       }
-    } catch (e) { console.error('[PUSH] error:', e) }
+    } catch (e) { console.error('[PUSH] notification routing error:', e) }
   })())
 
   return NextResponse.json(msg)

@@ -50,11 +50,12 @@ export async function sendPushToUser(
     const r = results[i]
     if (r.status === 'rejected') {
       const err = r.reason as { statusCode?: number; message?: string }
-      if (err.statusCode === 410 || err.statusCode === 403 || err.statusCode === 400) {
-        // 410 = expired, 403/400 = wrong VAPID key or invalid subscription
+      if (err.statusCode === 410 || err.statusCode === 404) {
+        // 410/404 = subscription definitiv expirată — șterge din DB
         await service().from('push_subscriptions').delete().eq('endpoint', subs[i].endpoint)
       } else {
-        throw new Error(`Push failed: ${err.statusCode} ${err.message}`)
+        // 400/403/5xx = eroare temporară sau VAPID greșit — loghează dar NU șterge subscripția
+        console.error(`[PUSH] failed ${err.statusCode} for endpoint ${subs[i].endpoint.slice(0, 60)}: ${err.message}`)
       }
     }
   }
