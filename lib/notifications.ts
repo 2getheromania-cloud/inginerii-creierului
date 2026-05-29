@@ -28,6 +28,13 @@ export async function maybeNotifyPrivateMessage(
   const lastSeen = recipient.last_seen_at ? new Date(recipient.last_seen_at).getTime() : 0
   if (Date.now() - lastSeen < INACTIVE_MS) return
 
+  // Skip if recipient has an active push subscription (push handles it)
+  const { count: pushCount } = await db
+    .from('push_subscriptions')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', recipientId)
+  if (pushCount && pushCount > 0) return
+
   // Skip if no unread messages from others exist in the conversation
   const { count } = await db
     .from('private_messages')
