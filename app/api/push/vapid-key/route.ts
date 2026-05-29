@@ -8,6 +8,6 @@ export async function GET() {
 
   const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
     ?? process.env.VAPID_PUBLIC_KEY
-    ?? 'BAWhOjm9knU0dWmj-lxm_JZyguNRDDT8mTcziNI2Nk_Rj6KgX4iSbxx6iyTuyz-UaPgU7xoq-h6ZS5SDu4U7D_M'
+    ?? 'BLl6oLlrGS4a_uKuda93fWYdLgKB6PvKjNLZd1pTfjLBM2eksPM6631gxAPvVD3vOU_5rIr2uY6oJ7VaJlLjaVQ'
   return NextResponse.json({ key })
 }
