@@ -168,6 +168,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   waitUntil((async () => {
     try {
       const { sendPushToUser } = await import('@/lib/push')
+      const { maybeNotifyPrivateMessage } = await import('@/lib/notifications')
       const senderName = senderProfile?.name ?? senderProfile?.email ?? 'Utilizator'
       const preview = content.trim().slice(0, 100)
 
@@ -176,9 +177,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           ? conv.participant_b_id
           : conv.participant_a_id
         await sendPushToUser(recipientId, { title: senderName, body: preview, url: '/mesaje' })
+        await maybeNotifyPrivateMessage(params.id, recipientId, senderName, preview)
       } else if (isAdmin) {
         const cursantId = conv.user_id ?? conv.participant_a_id
-        if (cursantId) await sendPushToUser(cursantId, { title: senderName, body: preview, url: '/mesaje' })
+        if (cursantId) {
+          await sendPushToUser(cursantId, { title: senderName, body: preview, url: '/mesaje' })
+          await maybeNotifyPrivateMessage(params.id, cursantId, senderName, preview)
+        }
       } else {
         const { data: admins } = await service()
           .from('profiles')
@@ -186,6 +191,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           .eq('role', 'admin')
         for (const admin of admins ?? []) {
           await sendPushToUser(admin.id, { title: senderName, body: preview, url: '/mesaje' })
+          await maybeNotifyPrivateMessage(params.id, admin.id, senderName, preview)
         }
       }
     } catch (e) { console.error('[PUSH] error:', e) }

@@ -23,6 +23,14 @@ export default function PushSettings() {
     if (typeof Notification === 'undefined') { setSupported(false); setPerm('indisponibil'); return }
     setPerm(Notification.permission)
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) { setSupported(false); return }
+
+    // iOS Safari expune PushManager din v16.4, dar funcționează DOAR în PWA instalat
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (navigator as unknown as { standalone?: boolean }).standalone === true
+    if (isIOS && !isStandalone) { setSupported(false); return }
+
     navigator.serviceWorker.ready.then(async reg => {
       const sub = await reg.pushManager.getSubscription()
       setHasSub(!!sub)
@@ -102,8 +110,13 @@ export default function PushSettings() {
     }
   }
 
-  const statusColor = inDb ? 'text-green-700 bg-green-50 border-green-200' : 'text-red-700 bg-red-50 border-red-200'
-  const statusText = !supported
+  const isLoading = supported && hasSub === null
+  const statusColor = isLoading
+    ? 'text-gray-600 bg-gray-50 border-gray-200'
+    : inDb ? 'text-green-700 bg-green-50 border-green-200' : 'text-red-700 bg-red-50 border-red-200'
+  const statusText = isLoading
+    ? 'Se verifică starea notificărilor...'
+    : !supported
     ? 'Browserul/aplicația nu suportă push notifications. Folosește aplicația instalată (PWA) pe iOS/Android.'
     : perm === 'denied'
     ? 'Permisiunea a fost refuzată. Mergi la Setări → Safari/Chrome → Notificări și activează manual.'
@@ -117,17 +130,17 @@ export default function PushSettings() {
     <div className="space-y-4">
       <div className={`rounded-xl border px-4 py-3 text-sm ${statusColor}`}>
         <p className="font-semibold mb-1">
-          Stare: {inDb ? '✓ Activ' : '✗ Inactiv'}
+          Stare: {isLoading ? '...' : inDb ? '✓ Activ' : '✗ Inactiv'}
         </p>
         <p>{statusText}</p>
-        {supported && perm !== 'denied' && (
+        {!isLoading && supported && perm !== 'denied' && (
           <p className="text-xs mt-1 opacity-70">
             Permisiune browser: {perm} · Subscripție browser: {hasSub === null ? '...' : hasSub ? 'da' : 'nu'} · Înregistrat în DB: {inDb === null ? '...' : inDb ? 'da' : 'nu'}
           </p>
         )}
       </div>
 
-      {supported && perm !== 'denied' && (
+      {supported && !isLoading && perm !== 'denied' && (
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={handleActivate}
