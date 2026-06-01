@@ -13,8 +13,9 @@ export default async function NotificariPage() {
   const profile = await getOrCreateProfile(user.id, user.email!)
   if (!profile || profile.role !== 'admin') redirect('/dashboard')
 
-  const [{ data: cursanti }, { data: recent }] = await Promise.all([
+  const [{ data: cursanti }, { data: admini }, { data: recent }] = await Promise.all([
     supabase.from('profiles').select('id, name, email').eq('role', 'cursant').order('name'),
+    supabase.from('profiles').select('id, name, email').eq('role', 'admin').order('name'),
     supabase.from('notifications').select('*').order('sent_at', { ascending: false }).limit(20),
   ])
 
@@ -24,6 +25,7 @@ export default async function NotificariPage() {
         <h1 className="text-2xl font-bold text-gray-900">Notificări</h1>
         <NotificariClient
           cursanti={(cursanti ?? []) as Pick<Profile, 'id' | 'name' | 'email'>[]}
+          admini={(admini ?? []) as Pick<Profile, 'id' | 'name' | 'email'>[]}
           recentNotifications={recent ?? []}
         />
       </div>

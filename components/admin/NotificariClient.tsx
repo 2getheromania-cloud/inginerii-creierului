@@ -11,10 +11,11 @@ const TEMPLATES = [
 
 interface Props {
   cursanti: Pick<Profile, 'id' | 'name' | 'email'>[]
+  admini: Pick<Profile, 'id' | 'name' | 'email'>[]
   recentNotifications: Notification[]
 }
 
-export default function NotificariClient({ cursanti, recentNotifications }: Props) {
+export default function NotificariClient({ cursanti, admini, recentNotifications }: Props) {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [subject, setSubject] = useState('')
   const [message, setMessage] = useState('')
@@ -31,8 +32,10 @@ export default function NotificariClient({ cursanti, recentNotifications }: Prop
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
   }
 
+  const allUsers = [...admini, ...cursanti]
+
   function selectAll() {
-    setSelectedIds(selectedIds.length === cursanti.length ? [] : cursanti.map(c => c.id))
+    setSelectedIds(selectedIds.length === allUsers.length ? [] : allUsers.map(c => c.id))
   }
 
   function applyTemplate(t: typeof TEMPLATES[0]) {
@@ -91,25 +94,35 @@ export default function NotificariClient({ cursanti, recentNotifications }: Prop
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-gray-800">Destinatari</h2>
             <button onClick={selectAll} className="text-xs text-brand-600 hover:underline">
-              {selectedIds.length === cursanti.length ? 'Deselectează toți' : 'Selectează toți'}
+              {selectedIds.length === allUsers.length ? 'Deselectează toți' : 'Selectează toți'}
             </button>
           </div>
           <div className="space-y-1 max-h-48 overflow-y-auto">
-            {cursanti.map(c => (
+            {admini.length > 0 && (
+              <p className="text-xs font-semibold text-gray-400 uppercase px-3 pt-1">Admini</p>
+            )}
+            {admini.map(c => (
               <label key={c.id} className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${selectedIds.includes(c.id) ? 'bg-brand-50' : 'hover:bg-gray-50'}`}>
-                <input
-                  type="checkbox"
-                  checked={selectedIds.includes(c.id)}
-                  onChange={() => toggleCursant(c.id)}
-                  className="w-4 h-4 accent-brand-600"
-                />
+                <input type="checkbox" checked={selectedIds.includes(c.id)} onChange={() => toggleCursant(c.id)} className="w-4 h-4 accent-brand-600" />
                 <div>
                   <p className="text-sm font-medium text-gray-800">{c.name || c.email}</p>
                   {c.name && <p className="text-xs text-gray-400">{c.email}</p>}
                 </div>
               </label>
             ))}
-            {cursanti.length === 0 && <p className="text-sm text-gray-400 p-2">Niciun cursant.</p>}
+            {cursanti.length > 0 && (
+              <p className="text-xs font-semibold text-gray-400 uppercase px-3 pt-2">Cursanți</p>
+            )}
+            {cursanti.map(c => (
+              <label key={c.id} className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${selectedIds.includes(c.id) ? 'bg-brand-50' : 'hover:bg-gray-50'}`}>
+                <input type="checkbox" checked={selectedIds.includes(c.id)} onChange={() => toggleCursant(c.id)} className="w-4 h-4 accent-brand-600" />
+                <div>
+                  <p className="text-sm font-medium text-gray-800">{c.name || c.email}</p>
+                  {c.name && <p className="text-xs text-gray-400">{c.email}</p>}
+                </div>
+              </label>
+            ))}
+            {allUsers.length === 0 && <p className="text-sm text-gray-400 p-2">Niciun utilizator.</p>}
           </div>
           <p className="text-xs text-gray-400 mt-2">{selectedIds.length} selectat(ți)</p>
         </div>
