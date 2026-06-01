@@ -22,6 +22,11 @@ export default function NotificariClient({ cursanti, recentNotifications }: Prop
   const [sending, setSending] = useState(false)
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null)
 
+  const [pushTitle, setPushTitle] = useState('')
+  const [pushBody, setPushBody] = useState('')
+  const [sendingPush, setSendingPush] = useState(false)
+  const [pushResult, setPushResult] = useState<{ ok: boolean; msg: string } | null>(null)
+
   function toggleCursant(id: string) {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
   }
@@ -33,6 +38,24 @@ export default function NotificariClient({ cursanti, recentNotifications }: Prop
   function applyTemplate(t: typeof TEMPLATES[0]) {
     setSubject(t.subject)
     setMessage(t.body)
+  }
+
+  async function handleSendPush(e: React.FormEvent) {
+    e.preventDefault()
+    if (selectedIds.length === 0 || !pushTitle.trim() || !pushBody.trim()) return
+    setSendingPush(true)
+    setPushResult(null)
+    const res = await fetch('/api/notifications/send-push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userIds: selectedIds, title: pushTitle, body: pushBody }),
+    })
+    const json = await res.json()
+    setSendingPush(false)
+    setPushResult(res.ok
+      ? { ok: true, msg: `Push trimis la ${json.sent} utilizator(i).${json.failed ? ` Eșuat: ${json.failed}.` : ''}` }
+      : { ok: false, msg: json.error ?? 'Eroare.' }
+    )
   }
 
   async function handleSend(e: React.FormEvent) {
@@ -90,6 +113,36 @@ export default function NotificariClient({ cursanti, recentNotifications }: Prop
           </div>
           <p className="text-xs text-gray-400 mt-2">{selectedIds.length} selectat(ți)</p>
         </div>
+
+        {/* Push */}
+        <form onSubmit={handleSendPush} className="card space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-gray-800">Trimite push</h2>
+            <button
+              type="button"
+              onClick={() => { setPushTitle('Întâlnire Zoom azi la 19:30'); setPushBody('Azi la 19:30 ai întâlnirea săptămânală de mentorare IC. Conectează-te din aplicație, tabul „Întâlniri".') }}
+              className="btn-secondary text-xs py-1 px-2"
+            >
+              Zoom 19:30
+            </button>
+          </div>
+          <div>
+            <label className="label">Titlu</label>
+            <input type="text" className="input" value={pushTitle} onChange={e => setPushTitle(e.target.value)} placeholder="Titlul notificării..." required />
+          </div>
+          <div>
+            <label className="label">Mesaj</label>
+            <textarea className="input resize-none min-h-[80px]" value={pushBody} onChange={e => setPushBody(e.target.value)} placeholder="Textul notificării..." required />
+          </div>
+          {pushResult && (
+            <p className={`text-sm rounded-lg px-3 py-2 ${pushResult.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+              {pushResult.msg}
+            </p>
+          )}
+          <button type="submit" className="btn-primary w-full" disabled={sendingPush || selectedIds.length === 0}>
+            {sendingPush ? 'Se trimite...' : `Trimite push (${selectedIds.length} selectat(ți))`}
+          </button>
+        </form>
 
         {/* Template-uri */}
         <div className="card">
