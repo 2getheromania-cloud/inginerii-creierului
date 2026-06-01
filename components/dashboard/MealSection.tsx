@@ -1,6 +1,7 @@
 'use client'
 import { cn } from '@/lib/utils'
 import type { MealChecks, SnackChecks } from '@/lib/types'
+import { RECIPE_GROUPS } from '@/lib/recipes'
 
 interface MealSectionProps {
   title: string
@@ -31,7 +32,11 @@ export default function MealSection({ title, icon, isSnack = false, checks, reci
   const items = isSnack ? SNACK_ITEMS : MEAL_ITEMS
 
   function toggle(key: string) {
-    onChange({ ...(checks as unknown as Record<string, boolean>), [key]: !(checks as unknown as Record<string, boolean>)[key] } as unknown as MealChecks | SnackChecks)
+    onChange({ ...(checks as unknown as Record<string, unknown>), [key]: !(checks as unknown as Record<string, boolean>)[key] } as unknown as MealChecks | SnackChecks)
+  }
+
+  function updateString(key: string, value: string) {
+    onChange({ ...(checks as unknown as Record<string, unknown>), [key]: value } as unknown as MealChecks | SnackChecks)
   }
 
   const total = items.length
@@ -67,6 +72,50 @@ export default function MealSection({ title, icon, isSnack = false, checks, reci
       <div className="divide-y divide-gray-50">
         {items.map(item => {
           const checked = !!(checks as unknown as Record<string, boolean>)[item.key]
+
+          if (item.key === 'recipe') {
+            const mealChecks = checks as MealChecks
+            return (
+              <div key={item.key} className={cn('px-4 py-3 transition-colors', checked ? 'bg-brand-50' : 'bg-white')}>
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggle(item.key)}
+                    className="mt-0.5 w-4 h-4 accent-brand-600 rounded cursor-pointer flex-shrink-0"
+                  />
+                  <p className={cn('text-sm font-medium', checked ? 'text-brand-700 line-through' : 'text-gray-700')}>
+                    {item.label}
+                  </p>
+                </label>
+                {checked && (
+                  <div className="mt-3 ml-7 space-y-2">
+                    <select
+                      value={mealChecks.recipe_name ?? ''}
+                      onChange={e => updateString('recipe_name', e.target.value)}
+                      className="input text-sm py-1.5 w-full"
+                    >
+                      <option value="">-- Alege rețeta --</option>
+                      {RECIPE_GROUPS.map(group => (
+                        <optgroup key={group.group} label={group.group}>
+                          {group.items.map(recipeName => (
+                            <option key={recipeName} value={recipeName}>{recipeName}</option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
+                    <textarea
+                      value={mealChecks.recipe_note ?? ''}
+                      onChange={e => updateString('recipe_note', e.target.value)}
+                      placeholder="Ce ai modificat sau de ce ai ales altceva? (opțional)"
+                      className="input text-sm py-1.5 resize-none min-h-[60px] w-full"
+                    />
+                  </div>
+                )}
+              </div>
+            )
+          }
+
           return (
             <label
               key={item.key}

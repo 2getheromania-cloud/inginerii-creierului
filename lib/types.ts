@@ -39,6 +39,8 @@ export interface MealChecks {
   water: boolean
   supplements: boolean
   recipe: boolean
+  recipe_name?: string
+  recipe_note?: string
 }
 
 export interface SnackChecks {

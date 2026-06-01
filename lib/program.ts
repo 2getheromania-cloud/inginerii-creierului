@@ -168,9 +168,9 @@ export const SLIDER_LABELS: Record<string, string> = {
 }
 
 export const DEFAULT_CHECKS = {
-  breakfast:  { protein: false, vegetables: false, fats: false, water: false, supplements: false, recipe: false },
-  lunch:      { protein: false, vegetables: false, fats: false, water: false, supplements: false, recipe: false },
-  dinner:     { protein: false, vegetables: false, fats: false, water: false, supplements: false, recipe: false },
+  breakfast:  { protein: false, vegetables: false, fats: false, water: false, supplements: false, recipe: false, recipe_name: '', recipe_note: '' },
+  lunch:      { protein: false, vegetables: false, fats: false, water: false, supplements: false, recipe: false, recipe_name: '', recipe_note: '' },
+  dinner:     { protein: false, vegetables: false, fats: false, water: false, supplements: false, recipe: false, recipe_name: '', recipe_note: '' },
   snack1:     { protein: false, vegetables: false, fats: false, fruits: false },
   snack2:     { protein: false, vegetables: false, fats: false, fruits: false },
   movement:   false,
