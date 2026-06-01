@@ -5,7 +5,7 @@ export interface RecipeGroup {
 
 export const RECIPE_GROUPS: RecipeGroup[] = [
   {
-    group: 'Detox 21 — Pregătire (Ziua 1–7)',
+    group: 'Detox 21',
     items: [
       'Smoothie de mere',
       'Ouă cu turmeric',
@@ -28,11 +28,6 @@ export const RECIPE_GROUPS: RecipeGroup[] = [
       'Berry Parfait',
       'Ouă poșate peste dovleac',
       'Pui cu coriandru și salată de citrice Jicama',
-    ],
-  },
-  {
-    group: 'Detox 21 — Program (Ziua 8–21)',
-    items: [
       'Ovăz peste noapte',
       'Pui măruntit în bărci de andive',
       'Cartofi dulci umpluți',
