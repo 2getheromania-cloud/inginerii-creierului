@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
   if (!admin) return NextResponse.json({ ok: true, msg: 'no admin found' })
 
   const title = 'Întâlnire Zoom azi la 19:30'
-  const body = 'Azi la 19:30 ai întâlnirea săptămânală de mentorare IC.'
+  const body = 'Azi la 19:30 ai întâlnirea săptămânală de mentorare IC. Conectează-te din aplicație, tabul „Întâlniri".'
 
   try {
     await sendPushToUser(admin.id, { title, body, url: '/' })
