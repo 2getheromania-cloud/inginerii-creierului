@@ -185,6 +185,28 @@ export default async function ResursePage() {
           </div>
         )}
 
+        {/* ── Protocoale bonus ── */}
+        <div>
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">Protocoale bonus</h2>
+          <a
+            href="https://drive.google.com/drive/folders/1ErbCf36lsSfU8scnRN-HlX7uDNqfx5Ka?usp=drive_link"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="card hover:shadow-md transition-shadow group flex items-start justify-between gap-4"
+          >
+            <div className="min-w-0">
+              <div className="text-2xl mb-2">🎁</div>
+              <h3 className="font-semibold text-gray-800 mb-1 group-hover:text-brand-700 transition-colors">
+                Protocoale bonus
+              </h3>
+              <p className="text-sm text-gray-500">Resurse și protocoale suplimentare pentru programul tău.</p>
+              <p className="text-xs text-brand-600 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                Deschide în Google Drive →
+              </p>
+            </div>
+          </a>
+        </div>
+
         {/* ── Materiale generale ── */}
         <div>
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Materiale generale</h2>
