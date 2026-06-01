@@ -23,8 +23,8 @@ export async function GET(request: NextRequest) {
 
   if (!admin) return NextResponse.json({ ok: true, msg: 'no admin found' })
 
-  const title = 'Întâlnire Zoom în 1 oră'
-  const body = 'Azi la 19:30 ai întâlnirea săptămânală cu cursanții. Nu uita!'
+  const title = 'Întâlnire Zoom azi la 19:30'
+  const body = 'Azi la 19:30 ai întâlnirea săptămânală cu cursanții.'
 
   try {
     await sendPushToUser(admin.id, { title, body, url: '/' })
