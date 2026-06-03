@@ -33,7 +33,11 @@ export async function GET(request: NextRequest) {
   const header = [
     'Data', 'Cursant', 'Email', 'Sapt', 'Completare%',
     'Energie', 'Somn', 'Stres', 'Stare_generala', 'Productivitate',
-    'Pasi', 'Apa_ml', 'Miscare', 'Meditatie', 'Simptome',
+    'Pasi', 'Apa_ml', 'Miscare', 'Meditatie',
+    'MD_Proteina', 'MD_Legume', 'MD_Grasimi', 'MD_Apa', 'MD_Suplimente', 'MD_Reteta', 'MD_Reteta_Aleasa', 'MD_Modificari',
+    'Pranz_Proteina', 'Pranz_Legume', 'Pranz_Grasimi', 'Pranz_Apa', 'Pranz_Suplimente', 'Pranz_Reteta', 'Pranz_Reteta_Aleasa', 'Pranz_Modificari',
+    'Cina_Proteina', 'Cina_Legume', 'Cina_Grasimi', 'Cina_Apa', 'Cina_Suplimente', 'Cina_Reteta', 'Cina_Reteta_Aleasa', 'Cina_Modificari',
+    'Simptome',
   ].join(',')
 
   const rows = (reports ?? []).map((r: DailyReport & { profiles: { name: string; email: string; week: number } }) => {
@@ -41,9 +45,23 @@ export async function GET(request: NextRequest) {
     const s = r.sliders
     const c = r.checks
     const symptomsStr = r.symptoms.map(x => `${x.name}(${x.severity})`).join('; ')
+
+    function mealCols(meal: typeof c.breakfast) {
+      return [
+        meal.protein ? 1 : 0,
+        meal.vegetables ? 1 : 0,
+        meal.fats ? 1 : 0,
+        meal.water ? 1 : 0,
+        meal.supplements ? 1 : 0,
+        meal.recipe ? 1 : 0,
+        `"${(meal.recipe_name ?? '').replace(/"/g, '""')}"`,
+        `"${(meal.recipe_note ?? '').replace(/"/g, '""')}"`,
+      ]
+    }
+
     return [
       r.date,
-      `"${r.profiles?.name ?? ''}"`,
+      `"${(r.profiles?.name ?? '').replace(/"/g, '""')}"`,
       r.profiles?.email ?? '',
       r.profiles?.week ?? '',
       pct,
@@ -56,6 +74,9 @@ export async function GET(request: NextRequest) {
       c.total_water_ml ?? 0,
       c.movement ? 1 : 0,
       c.meditation ? 1 : 0,
+      ...mealCols(c.breakfast),
+      ...mealCols(c.lunch),
+      ...mealCols(c.dinner),
       `"${symptomsStr}"`,
     ].join(',')
   })
