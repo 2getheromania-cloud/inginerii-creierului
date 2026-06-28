@@ -53,17 +53,6 @@ export async function POST(req: Request) {
       )
     } catch (err) {
       console.error('[stripe webhook] signature verification failed:', (err as Error).message)
-      // TODO: logging temporar de diagnostic — de șters după ce semnătura trece
-      console.error('[stripe webhook] debug:', {
-        hasSecret: !!process.env.STRIPE_WEBHOOK_SECRET,
-        secretPrefix: process.env.STRIPE_WEBHOOK_SECRET?.slice(0, 8),
-        secretLen: process.env.STRIPE_WEBHOOK_SECRET?.length,
-        hasStripeKey: !!process.env.STRIPE_SECRET_KEY,
-        stripeKeyPrefix: process.env.STRIPE_SECRET_KEY?.slice(0, 8),
-        stripeKeyLen: process.env.STRIPE_SECRET_KEY?.length,
-        sigPresent: !!signature,
-        bodyLen: rawBody.length,
-      })
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
     }
 
