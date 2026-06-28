@@ -2,15 +2,28 @@ import { createClient as supa } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
+// Ruta generează un signed URL cu expirare scurtă — răspunsul NU trebuie
+// cache-uit de Next.js/Vercel, altfel se servește un URL deja expirat.
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 const BUCKET = 'carti'
 const FILE_PATH = 'Noroi_pe_sandalele_sfintilor_ONLINE.pdf'
 const DOWNLOAD_NAME = 'Noroi pe sandalele sfintilor.pdf'
 const MAX_DOWNLOADS = 5
+// Durata signed URL-ului. Mărită la 300s ca să acopere eventuale latențe
+// de rețea/redirect fără ca link-ul să expire înainte să fie folosit.
+const SIGNED_URL_TTL = 300
 
-// Client admin (service role) — fără cookie-uri, bypass complet RLS
+// Client admin (service role) — fără cookie-uri, bypass complet RLS.
+// Forțăm fetch fără cache ca apelurile către Supabase să nu fie memorate de Next.
 function service() {
-  return supa(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+  return supa(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    auth: { persistSession: false },
+    global: {
+      fetch: (input, init) => fetch(input, { ...init, cache: 'no-store' }),
+    },
+  })
 }
 
 export async function GET(
@@ -37,10 +50,10 @@ export async function GET(
       )
     }
 
-    // Signed URL de 60s din bucket-ul privat, cu nume de descărcare prietenos
+    // Signed URL din bucket-ul privat, cu nume de descărcare prietenos
     const { data: signed, error: signError } = await admin.storage
       .from(BUCKET)
-      .createSignedUrl(FILE_PATH, 60, { download: DOWNLOAD_NAME })
+      .createSignedUrl(FILE_PATH, SIGNED_URL_TTL, { download: DOWNLOAD_NAME })
 
     if (signError || !signed?.signedUrl) {
       console.error('[download] signed url error:', signError?.message)
@@ -58,7 +71,13 @@ export async function GET(
       return NextResponse.json({ error: 'Eroare internă' }, { status: 500 })
     }
 
-    return NextResponse.redirect(signed.signedUrl)
+    // Redirect cu cache complet dezactivat (browser + CDN Vercel), ca să nu
+    // se servească niciodată un signed URL expirat dintr-un răspuns cache-uit.
+    const res = NextResponse.redirect(signed.signedUrl)
+    res.headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate')
+    res.headers.set('CDN-Cache-Control', 'no-store')
+    res.headers.set('Vercel-CDN-Cache-Control', 'no-store')
+    return res
   } catch (err) {
     console.error('[download] unexpected error:', (err as Error).message)
     return NextResponse.json({ error: 'Eroare internă' }, { status: 500 })
