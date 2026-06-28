@@ -390,3 +390,31 @@ CREATE POLICY IF NOT EXISTS "docs_storage_delete" ON storage.objects
     bucket_id = 'documents' AND
     (auth.uid()::text = (storage.foldername(name))[1] OR public.is_admin())
   );
+
+-- ============================================================
+-- Purchases — vânzare cărți PDF prin Stripe
+-- Tabelul e accesat exclusiv prin service role (webhook Stripe +
+-- ruta de download), care ocolește RLS. Nu există acces din clientul
+-- anon/cursant; păstrăm doar o politică de citire pentru admini.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.purchases (
+  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email             TEXT NOT NULL,
+  stripe_session_id TEXT NOT NULL UNIQUE,
+  book_slug         TEXT NOT NULL,
+  download_token    UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE,
+  download_count    INTEGER NOT NULL DEFAULT 0,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE public.purchases ENABLE ROW LEVEL SECURITY;
+CREATE POLICY IF NOT EXISTS "purchases_admin" ON public.purchases
+  FOR ALL USING (public.is_admin());
+CREATE INDEX IF NOT EXISTS idx_purchases_email
+  ON public.purchases (email);
+
+-- Storage: bucket privat 'carti' pentru fișierele PDF ale cărților.
+-- Trebuie creat manual în Supabase Dashboard ca privat (public=false),
+-- iar PDF-ul încărcat la calea 'Noroi_pe_sandalele_sfintilor_ONLINE.pdf'.
+-- Signed URL-urile sunt generate cu service role, deci nu sunt necesare
+-- politici de storage pentru acces public.
+-- INSERT INTO storage.buckets (id, name, public) VALUES ('carti', 'carti', false) ON CONFLICT DO NOTHING;
