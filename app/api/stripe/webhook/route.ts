@@ -58,6 +58,9 @@ export async function POST(req: Request) {
         hasSecret: !!process.env.STRIPE_WEBHOOK_SECRET,
         secretPrefix: process.env.STRIPE_WEBHOOK_SECRET?.slice(0, 8),
         secretLen: process.env.STRIPE_WEBHOOK_SECRET?.length,
+        hasStripeKey: !!process.env.STRIPE_SECRET_KEY,
+        stripeKeyPrefix: process.env.STRIPE_SECRET_KEY?.slice(0, 8),
+        stripeKeyLen: process.env.STRIPE_SECRET_KEY?.length,
         sigPresent: !!signature,
         bodyLen: rawBody.length,
       })
