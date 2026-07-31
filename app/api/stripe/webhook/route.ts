@@ -36,7 +36,7 @@ function downloadEmailHtml(name: string, token: string) {
 }
 
 function reconstructiaEmailHtml(name: string, token: string) {
-  const prenume = name || 'dragă prietenă'
+  const prenume = name.trim().split(/\s+/)[0] || 'dragă prietenă'
   const downloadUrl = `${APP_URL}/download/${token}`
   return `
     <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px;color:#1f2937;line-height:1.6">
@@ -60,7 +60,7 @@ function reconstructiaEmailHtml(name: string, token: string) {
 }
 
 function reconstructiaEmailText(name: string, token: string) {
-  const prenume = name || 'dragă prietenă'
+  const prenume = name.trim().split(/\s+/)[0] || 'dragă prietenă'
   const downloadUrl = `${APP_URL}/download/${token}`
   return `Dragă ${prenume},
 
