@@ -11,6 +11,8 @@ export default async function DocumentePage() {
   if (!user) redirect('/')
   const profile = await getOrCreateProfile(user.id, user.email!)
   if (!profile) redirect('/')
+  // /documente e exclus din middleware — verificăm aici contul dezactivat
+  if (profile.active === false) redirect('/cont-inactiv')
 
   let cursanti: Pick<Profile, 'id' | 'name' | 'email'>[] = []
   if (profile.role === 'admin') {

@@ -6,7 +6,7 @@ import ProgressChart from '@/components/charts/ProgressChart'
 import AdminCursantClient from '@/components/admin/AdminCursantClient'
 import AdminPrivateChatClient from '@/components/admin/AdminPrivateChatClient'
 import AdminInsightCard from '@/components/admin/AdminInsightCard'
-import DeleteUserButton from '@/components/admin/DeleteUserButton'
+import AccountActions from '@/components/admin/AccountActions'
 import DocumenteClient from '@/components/documente/DocumenteClient'
 import { formatDate } from '@/lib/utils'
 import {
@@ -56,6 +56,7 @@ export default async function AdminCursantPage({ params }: { params: { id: strin
   )
 
   const userName = cursantProfile.name ?? cursantProfile.email
+  const isActive = cursantProfile.active !== false
 
   return (
     <AppShell profile={myProfile}>
@@ -71,6 +72,9 @@ export default async function AdminCursantPage({ params }: { params: { id: strin
             <p className="text-gray-500">{cursantProfile.email}</p>
           </div>
           <div className="flex flex-wrap gap-2">
+            {!isActive && (
+              <span className="badge bg-amber-100 text-amber-800 text-sm px-3 py-1">Inactiv</span>
+            )}
             <span className={cn('badge text-sm px-3 py-1', PHASE_COLORS[phase])}>{phase}</span>
             <span className="badge bg-gray-100 text-gray-700 text-sm px-3 py-1">Săpt. {cursantProfile.week}/24</span>
           </div>
@@ -257,14 +261,21 @@ export default async function AdminCursantPage({ params }: { params: { id: strin
           <div className="card border border-red-200 bg-red-50/30">
             <h3 className="font-semibold text-gray-800 mb-1">Acțiuni administrative</h3>
             <p className="text-sm text-gray-500 mb-1">
-              Ștergerea unui cursant este <strong>ireversibilă</strong>. Vor fi șterse:
+              <strong>Dezactivarea</strong> blochează accesul în aplicație, dar păstrează toate
+              datele și este reversibilă oricând. <strong>Ștergerea permanentă</strong> este
+              ireversibilă și elimină:
             </p>
             <ul className="text-sm text-gray-500 list-disc list-inside mb-4 space-y-0.5">
               <li>Toate rapoartele zilnice</li>
+              <li>Documentele și mesajele</li>
               <li>Profilul cursantului</li>
               <li>Contul de autentificare</li>
             </ul>
-            <DeleteUserButton userId={cursantProfile.id} userName={userName} />
+            <AccountActions
+              userId={cursantProfile.id}
+              userName={userName}
+              active={isActive}
+            />
           </div>
         </div>
 

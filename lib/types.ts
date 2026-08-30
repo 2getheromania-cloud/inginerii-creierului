@@ -15,6 +15,7 @@ export interface Profile {
   community_last_seen_at?: string | null
   onboarding_completed?: boolean | null
   protocols?: string[] | null
+  active?: boolean
 }
 
 export interface ProtocolType {
@@ -203,6 +204,7 @@ export interface AdminStats {
   days_since_report: number | null
   reports_last_30_days: number
   onboarding_completed: boolean | null
+  active?: boolean
 }
 
 export type VideoCategory = 'somn' | 'microbiom' | 'stres' | 'nutritie' | 'mindset' | 'tiroida' | 'general'

@@ -14,8 +14,16 @@ export default async function AdminPage() {
   const profile = await getOrCreateProfile(user.id, user.email!)
   if (!profile || profile.role !== 'admin') redirect('/dashboard')
 
-  const { data: stats } = await supabase.from('admin_stats').select('*').order('created_at', { ascending: false })
-  const cursanti = (stats ?? []) as AdminStats[]
+  // `active` nu face parte din view-ul admin_stats — îl aducem separat din profiles
+  const [{ data: stats }, { data: activeRows }] = await Promise.all([
+    supabase.from('admin_stats').select('*').order('created_at', { ascending: false }),
+    supabase.from('profiles').select('id, active'),
+  ])
+  const activeMap = new Map((activeRows ?? []).map(p => [p.id as string, p.active as boolean | null]))
+  const cursanti = ((stats ?? []) as AdminStats[]).map(c => ({
+    ...c,
+    active: activeMap.get(c.id) !== false,
+  }))
 
   const today         = new Date().toISOString().split('T')[0]
   const totalCursanti = cursanti.length

@@ -309,6 +309,11 @@ ALTER TABLE public.daily_reports ADD COLUMN IF NOT EXISTS note TEXT;
 -- Reminder time per user (HH:MM format, default 18:00)
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS reminder_time TEXT NOT NULL DEFAULT '18:00';
 
+-- Cont activ/dezactivat. active = false → acces blocat în aplicație (middleware
+-- redirecționează spre /cont-inactiv), dar toate datele se păstrează.
+-- Vezi supabase/migrations/20260830_active_and_delete_fix.sql
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT TRUE;
+
 -- Documents
 CREATE TABLE IF NOT EXISTS public.documents (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),

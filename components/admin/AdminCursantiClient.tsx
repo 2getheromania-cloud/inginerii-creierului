@@ -26,6 +26,7 @@ export default function AdminCursantiClient({
   const [phaseFilter, setPhaseFilter]   = useState<ProgramPhase | ''>('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [protocolOnly, setProtocolOnly] = useState(false)
+  const [inactiveOnly, setInactiveOnly] = useState(false)
 
   // Bulk selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -43,8 +44,9 @@ export default function AdminCursantiClient({
     if (statusFilter === 'active')    list = list.filter(c => c.days_since_report === 0)
     if (statusFilter === 'inactive')  list = list.filter(c => (c.days_since_report ?? 99) >= 3)
     if (protocolOnly)                 list = list.filter(c => Object.values(c.flags as ProtocolFlags).some(Boolean))
+    if (inactiveOnly)                 list = list.filter(c => c.active === false)
     return list
-  }, [cursanti, search, phaseFilter, statusFilter, protocolOnly])
+  }, [cursanti, search, phaseFilter, statusFilter, protocolOnly, inactiveOnly])
 
   const filteredIds = filtered.map(c => c.id)
   const selectableIds = filteredIds.filter(id => id !== myId)
@@ -101,8 +103,11 @@ export default function AdminCursantiClient({
     router.refresh()
   }
 
-  const hasFilters = search || phaseFilter || statusFilter !== 'all' || protocolOnly
-  function resetFilters() { setSearch(''); setPhaseFilter(''); setStatusFilter('all'); setProtocolOnly(false) }
+  const hasFilters = search || phaseFilter || statusFilter !== 'all' || protocolOnly || inactiveOnly
+  function resetFilters() {
+    setSearch(''); setPhaseFilter(''); setStatusFilter('all')
+    setProtocolOnly(false); setInactiveOnly(false)
+  }
 
   return (
     <div className="card p-0 overflow-hidden">
@@ -143,6 +148,14 @@ export default function AdminCursantiClient({
                 : 'bg-white text-gray-600 border-gray-200 hover:border-amber-300'
             )}>
             Protocoale active
+          </button>
+          <button onClick={() => setInactiveOnly(v => !v)}
+            className={cn('text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors',
+              inactiveOnly
+                ? 'bg-gray-700 text-white border-gray-700'
+                : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+            )}>
+            Conturi dezactivate
           </button>
           {hasFilters && (
             <button onClick={resetFilters} className="text-xs text-gray-400 hover:text-gray-600 underline ml-1">
@@ -220,7 +233,14 @@ export default function AdminCursantiClient({
                     />
                   </td>
                   <td className="px-4 py-4">
-                    <p className="font-medium text-gray-900">{c.name || '—'}</p>
+                    <div className="flex items-center gap-2">
+                      <p className={cn('font-medium', c.active === false ? 'text-gray-400' : 'text-gray-900')}>
+                        {c.name || '—'}
+                      </p>
+                      {c.active === false && (
+                        <span className="badge bg-amber-100 text-amber-800 text-xs">Inactiv</span>
+                      )}
+                    </div>
                     <p className="text-xs text-gray-400">{c.email}</p>
                   </td>
                   <td className="px-4 py-4">

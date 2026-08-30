@@ -19,6 +19,8 @@ export default async function MesajePage() {
 
   const profile = await getOrCreateProfile(user.id, user.email!)
   if (!profile) redirect('/')
+  // /mesaje e exclus din middleware — verificăm aici contul dezactivat
+  if (profile.active === false) redirect('/cont-inactiv')
 
   const isAdmin = profile.role === 'admin'
 

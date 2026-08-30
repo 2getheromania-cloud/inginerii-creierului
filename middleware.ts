@@ -52,35 +52,35 @@ export async function middleware(request: NextRequest) {
       '/admin', '/chat',
     ]
     const isProtected = protectedPaths.some(p => pathname.startsWith(p))
+    const isInactivePage = pathname === '/cont-inactiv'
 
     if (isProtected && !user) {
       return redirectWithCookies(new URL('/', request.url))
     }
 
-    if (pathname.startsWith('/admin') && user) {
+    if (user && (isProtected || isInactivePage || pathname === '/')) {
+      // select('*') — `active` poate lipsi până la rularea migrației, iar o
+      // eroare de coloană ar sări peste verificarea de rol de mai jos.
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('role')
+        .select('*')
         .eq('id', user.id)
         .single()
-      if (error) {
-        console.error('[middleware] profile fetch error (admin check):', error.message)
-      } else if (profile?.role !== 'admin') {
-        return redirectWithCookies(new URL('/dashboard', request.url))
-      }
-    }
 
-    if (pathname === '/' && user) {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
       if (error) {
-        console.error('[middleware] profile fetch error (login redirect):', error.message)
+        console.error('[middleware] profile fetch error:', error.message)
       } else {
-        const dest = profile?.role === 'admin' ? '/admin' : '/dashboard'
-        return redirectWithCookies(new URL(dest, request.url))
+        // Cont dezactivat de admin — acces blocat, datele rămân intacte
+        if (profile?.active === false) {
+          if (!isInactivePage) return redirectWithCookies(new URL('/cont-inactiv', request.url))
+        } else if (isInactivePage) {
+          return redirectWithCookies(new URL('/dashboard', request.url))
+        } else if (pathname.startsWith('/admin') && profile?.role !== 'admin') {
+          return redirectWithCookies(new URL('/dashboard', request.url))
+        } else if (pathname === '/') {
+          const dest = profile?.role === 'admin' ? '/admin' : '/dashboard'
+          return redirectWithCookies(new URL(dest, request.url))
+        }
       }
     }
   } catch (err) {
