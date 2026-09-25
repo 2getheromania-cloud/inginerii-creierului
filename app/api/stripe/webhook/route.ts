@@ -10,6 +10,18 @@ const FROM = 'Inginerii Creierului <carte@ingineriicreierului.ro>'
 const FROM_RECONSTRUCTIA = 'Psiholog Narcisa Ispas <carte@ingineriicreierului.ro>'
 const APP_URL = 'https://app.ingineriicreierului.ro'
 
+// Prețurile programului „Cele 7 Etape ale Vindecării".
+// Tratate de app/api/stripe/webhook-7etape/route.ts, care are endpoint propriu.
+// Aici doar se ignoră: ambele endpoint-uri primesc checkout.session.completed
+// pentru orice plată din cont.
+const SAPTE_ETAPE_PRICE_IDS = [
+  'price_1UJSLZBYJzqSoaiHVoHdgaZL', // Harta — 797 lei
+  'price_1UJSLZBYJzqSoaiHSWqxqZZc', // Harta — 2 rate
+  'price_1UJSO0BYJzqSoaiHnjg3uPrc', // Harta + Instrumente — 1.197 lei
+  'price_1UJSO0BYJzqSoaiHlpYEh7GV', // Harta + Instrumente — 3 rate
+  'price_1UJSPKBYJzqSoaiHBq9uQcoG', // Ghidare — 397 lei/lună
+]
+
 // Client admin (service role) — fără cookie-uri, bypass complet RLS
 function service() {
   return supa(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
@@ -141,6 +153,7 @@ export async function POST(req: Request) {
         // Determină produsul cumpărat din line items (numele produsului).
         // Ramificarea de email se face pe baza acestui nume; livrarea cărții rămâne identică.
         let isReconstructiaPurchase = false
+            let isSapteEtapePurchase = false
         try {
           const lineItems = await stripe().checkout.sessions.listLineItems(session.id, {
             expand: ['data.price.product'],
@@ -153,11 +166,18 @@ export async function POST(req: Request) {
                 : ''
             const itemName = productName || item.description || ''
             return isReconstructia(itemName)
-          })
+          })     
+            isSapteEtapePurchase = lineItems.data.some((item) =>
+        SAPTE_ETAPE_PRICE_IDS.includes(item.price?.id ?? '')
+      )
         } catch (liErr) {
           console.error('[stripe webhook] listLineItems error:', (liErr as Error).message)
         }
-
+    // Vânzare a programului „Cele 7 Etape": are webhook propriu (webhook-7etape).
+    // Ieșim înainte de upsert și înainte de emailul cu cartea.
+    if (isSapteEtapePurchase) {
+      return NextResponse.json({ received: true, ignored: 'cele-7-etape' })
+    }
         // Upsert idempotent — dacă session-ul există deja, nu se inserează nimic nou.
         // Identic pentru ambele produse, ca linkul /download/[token] să funcționeze la fel.
         const { data, error } = await service()
