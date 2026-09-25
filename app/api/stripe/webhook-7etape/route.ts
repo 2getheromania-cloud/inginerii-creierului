@@ -25,20 +25,35 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+// Clienții se construiesc LENEȘ, la prima cerere — nu la încărcarea modulului.
+//
+// Next evaluează modulul fiecărei rute în timpul build-ului, la pasul
+// „Collecting page data". Un `new Stripe(process.env.X!)` scris la nivel de
+// modul se execută atunci; dacă variabila lipsește în mediul acela, aruncă
+// „Neither apiKey nor config.authenticator provided" și TOT build-ul cade —
+// inclusiv pentru proiectele care n-au nimic de-a face cu plățile.
+//
+// Webhook-ul vechi al cărții folosește același tipar, din același motiv.
+function stripe(): Stripe {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!)
+}
+
+// Cheia de service ocolește RLS. Nu ajunge niciodată în browser.
+function admin(): SupabaseClient {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  )
+}
 
 // ATENȚIE: secret de semnătură PROPRIU, nu STRIPE_WEBHOOK_SECRET.
 // Variabila aceea e deja folosită de webhook-ul cărții și al RECONSTRUCȚIEI.
 // Suprascrisă, ar face vechiul webhook să respingă orice eveniment ca semnătură
 // invalidă — plățile ar intra, cartea n-ar mai pleca, și nimic n-ar părea rupt.
-const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET_7ETAPE!
-
-// Cheia de service ocolește RLS. Nu ajunge niciodată în browser.
-const admin: SupabaseClient = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-)
+function webhookSecret(): string {
+  return process.env.STRIPE_WEBHOOK_SECRET_7ETAPE!
+}
 
 export async function POST(req: NextRequest) {
   const signature = req.headers.get('stripe-signature')
@@ -50,10 +65,10 @@ export async function POST(req: NextRequest) {
 
   let event: Stripe.Event
   try {
-    event = stripe.webhooks.constructEvent(
+    event = stripe().webhooks.constructEvent(
       raw,
       signature,
-      WEBHOOK_SECRET
+      webhookSecret()
     )
   } catch (err) {
     console.error('[stripe] semnătură invalidă:', err)
@@ -63,7 +78,7 @@ export async function POST(req: NextRequest) {
   // Deduplicare. Stripe retrimite același eveniment la orice eșec de rețea,
   // iar fără asta al doilea mesaj rescrie enrolled_at și mută tot calendarul
   // omului cu câteva minute — sau îi trimite un al doilea magic link.
-  const { error: dupErr } = await admin
+  const { error: dupErr } = await admin()
     .from('stripe_events')
     .insert({ id: event.id, type: event.type })
 
@@ -93,7 +108,7 @@ export async function POST(req: NextRequest) {
     }
   } catch (err) {
     console.error(`[stripe] ${event.type} a eșuat:`, err)
-    await admin.from('stripe_events').delete().eq('id', event.id)
+    await admin().from('stripe_events').delete().eq('id', event.id)
     return NextResponse.json({ error: 'procesare eșuată' }, { status: 500 })
   }
 
@@ -109,7 +124,7 @@ async function handleCheckout(session: Stripe.Checkout.Session) {
   const priceId = await resolvePriceId(session)
   if (!priceId) throw new Error(`sesiunea ${session.id} nu are un preț`)
 
-  const { data: price, error: priceErr } = await admin
+  const { data: price, error: priceErr } = await admin()
     .from('stripe_prices')
     .select('program_slug, tier, installments')
     .eq('price_id', priceId)
@@ -126,7 +141,7 @@ async function handleCheckout(session: Stripe.Checkout.Session) {
     return
   }
 
-  const { data: program, error: progErr } = await admin
+  const { data: program, error: progErr } = await admin()
     .from('programs')
     .select('id, access_months')
     .eq('slug', price.program_slug)
@@ -143,7 +158,7 @@ async function handleCheckout(session: Stripe.Checkout.Session) {
   // Ghidarea se adaugă peste o înscriere existentă, nu o înlocuiește
   // și nu resetează calendarul.
   if (price.tier === 'ghidare') {
-    const { error } = await admin
+    const { error } = await admin()
       .from('enrollments')
       .update({
         tier: 'ghidare',
@@ -155,7 +170,7 @@ async function handleCheckout(session: Stripe.Checkout.Session) {
     return
   }
 
-  const { error: enrollErr } = await admin.from('enrollments').upsert(
+  const { error: enrollErr } = await admin().from('enrollments').upsert(
     {
       user_id: userId,
       program_id: program.id,
@@ -196,7 +211,7 @@ async function limiteazaRatele(
     return
   }
 
-  const sub = await stripe.subscriptions.retrieve(subId)
+  const sub = await stripe().subscriptions.retrieve(subId)
   if (sub.cancel_at) return // pus deja; evenimentul se repetă
 
   // Prima rată se încasează la checkout. Mai rămân installments - 1 facturi,
@@ -205,7 +220,7 @@ async function limiteazaRatele(
   const sfarsit = new Date(start)
   sfarsit.setMonth(sfarsit.getMonth() + installments)
 
-  await stripe.subscriptions.update(subId, {
+  await stripe().subscriptions.update(subId, {
     cancel_at: Math.floor(sfarsit.getTime() / 1000),
     metadata: { ...sub.metadata, rate: String(installments) },
   })
@@ -216,24 +231,24 @@ async function resolvePriceId(session: Stripe.Checkout.Session): Promise<string 
     return session.line_items.data[0].price.id
   }
   // line_items nu vine în payload-ul webhook-ului; se cere separat.
-  const items = await stripe.checkout.sessions.listLineItems(session.id, { limit: 1 })
+  const items = await stripe().checkout.sessions.listLineItems(session.id, { limit: 1 })
   return items.data[0]?.price?.id ?? null
 }
 
 async function findOrCreateUser(email: string): Promise<string> {
-  const { data: existing, error: lookupErr } = await admin.rpc('get_user_id_by_email', {
+  const { data: existing, error: lookupErr } = await admin().rpc('get_user_id_by_email', {
     p_email: email,
   })
   if (lookupErr) throw lookupErr
   if (existing) return existing as string
 
-  const { data: created, error: createErr } = await admin.auth.admin.createUser({
+  const { data: created, error: createErr } = await admin().auth.admin.createUser({
     email,
     email_confirm: true, // a plătit; nu-i mai cerem să confirme adresa
   })
   if (createErr) {
     // Cursă între două evenimente simultane: dacă tocmai a apărut, îl luăm.
-    const { data: retry } = await admin.rpc('get_user_id_by_email', { p_email: email })
+    const { data: retry } = await admin().rpc('get_user_id_by_email', { p_email: email })
     if (retry) return retry as string
     throw createErr
   }
@@ -261,7 +276,7 @@ async function sendMagicLink(email: string) {
 
 async function handleRefund(charge: Stripe.Charge) {
   if (!charge.customer) return
-  const { error } = await admin
+  const { error } = await admin()
     .from('enrollments')
     .update({ status: 'refunded' })
     .eq('stripe_customer_id', charge.customer as string)
@@ -271,7 +286,7 @@ async function handleRefund(charge: Stripe.Charge) {
 async function handleSubscriptionEnded(sub: Stripe.Subscription) {
   // Ratele (2× sau 3× 419) se termină normal după ultima plată — asta NU e
   // o anulare. Accesul rămâne. Doar Ghidarea, abonament continuu, se închide.
-  const { data: enrollment } = await admin
+  const { data: enrollment } = await admin()
     .from('enrollments')
     .select('id, tier')
     .eq('stripe_subscription_id', sub.id)
@@ -279,7 +294,7 @@ async function handleSubscriptionEnded(sub: Stripe.Subscription) {
 
   if (!enrollment || enrollment.tier !== 'ghidare') return
 
-  const { error } = await admin
+  const { error } = await admin()
     .from('enrollments')
     .update({ tier: 'harta_instrumente', stripe_subscription_id: null })
     .eq('id', enrollment.id)
