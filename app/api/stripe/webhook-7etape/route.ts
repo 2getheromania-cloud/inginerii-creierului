@@ -267,7 +267,16 @@ async function sendMagicLink(email: string) {
     email,
     options: {
       shouldCreateUser: false,
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/cele-7-etape`,
+      // ATENȚIE: /cele-7-etape/intrare, NU /cele-7-etape.
+      //
+      // Supabase trimite omul la adresa asta cu sesiunea în coadă — token-uri
+      // în fragment, sau ?code=. Cineva trebuie să le preia și să le schimbe
+      // pe o sesiune. O pagină obișnuită nu face asta: omul ar ateriza pe
+      // programul lui, dar nedeconectat, și ar vedea „intră în program".
+      //
+      // Nici /auth/confirm și nici /auth/callback nu merg aici: amândouă
+      // sfârșesc cu redirect către /dashboard, adică spre programul de 6 luni.
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/cele-7-etape/intrare`,
     },
   })
   // Emailul nu blochează accesul: contul există, omul poate cere singur link nou.
