@@ -35,7 +35,7 @@ export const corp = `<header class="head">
 
     <section>
       <h2>Tabelul</h2>
-      <table class="fill">
+      <table class="fisa-fill">
         <thead><tr><th>Căsuța</th><th>Ce scriu</th><th>Data</th></tr></thead>
         <tbody>
           <tr><td>Unde sunt, pe etaje</td><td></td><td></td></tr>

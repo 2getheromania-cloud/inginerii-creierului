@@ -87,12 +87,12 @@ caption{
 }
 th,td{border:1px solid var(--rule); padding:9px 10px; text-align:left; vertical-align:top}
 th{background:var(--bg2); font-weight:700; font-size:.78rem; letter-spacing:.02em}
-.when th{width:34%}
-.grid td{height:42px}
-.grid th:first-child{width:21%}
-.grid th:not(:first-child){text-align:center}
-.grid td:not(:first-child){text-align:center; color:var(--ink2)}
-.tw{overflow-x:auto}
+.fisa-when th{width:34%}
+.fisa-grid td{height:42px}
+.fisa-grid th:first-child{width:21%}
+.fisa-grid th:not(:first-child){text-align:center}
+.fisa-grid td:not(:first-child){text-align:center; color:var(--ink2)}
+.fisa-tw{overflow-x:auto}
 
 /* avertisment */
 .warn{
@@ -115,7 +115,7 @@ th{background:var(--bg2); font-weight:700; font-size:.78rem; letter-spacing:.02e
 
 @media (max-width:560px){
   .head{padding:22px 20px}
-  .grid td{height:38px}
+  .fisa-grid td{height:38px}
   table{font-size:.85rem}
   th,td{padding:7px 6px}
 }
@@ -132,7 +132,7 @@ th{background:var(--bg2); font-weight:700; font-size:.78rem; letter-spacing:.02e
   .mark{background:none;box-shadow:none;padding:0}
   .eyebrow{color:#7a5f22}
   .warn{background:none; border:1pt solid #999; break-inside:avoid}
-  .grid td{height:30pt}
+  .fisa-grid td{height:30pt}
   th{background:#f0ece4}
   h2,h3{break-after:avoid}
   table,.step{break-inside:avoid}

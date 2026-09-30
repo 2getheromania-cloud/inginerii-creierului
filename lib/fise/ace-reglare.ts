@@ -30,7 +30,7 @@ export const corp = `<header class="head">
     <section>
       <h2>Cele șapte, și a opta care lipsește</h2>
       <p>Două coloane. În stânga, cele șapte categorii din studiul original — înainte de 18 ani, în casa în care ai crescut. Bifezi categoria, nu descrii nimic.</p>
-      <table class="fill">
+      <table class="fisa-fill">
         <thead><tr><th></th><th>Am trăit asta</th><th>Cine a fost lângă mine atunci</th></tr></thead>
         <tbody>
           <tr><td>Umilire, amenințare, insultă repetată din partea unui adult</td><td></td><td></td></tr>

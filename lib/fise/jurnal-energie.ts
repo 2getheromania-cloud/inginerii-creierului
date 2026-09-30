@@ -26,7 +26,7 @@ export const corp = `<header class="head">
     <section>
       <h2>Cele trei însemnări</h2>
       <p class="sub">La ore aproximative, nu la fix.</p>
-      <table class="when" style="margin-top:14px">
+      <table class="fisa-when" style="margin-top:14px">
         <tr><th>La trezire, înainte de cafea</th><td>Energia, de la 0 la 10. Și o singură vorbă: cum te-ai trezit.</td></tr>
         <tr><th>Pe la prânz</th><td>Energia, 0–10. Ce ai făcut în prima parte a zilei, într-un rând.</td></tr>
         <tr><th>Seara, înainte de culcare</th><td>Energia, 0–10. Ce a costat cel mai mult azi.</td></tr>
@@ -35,8 +35,8 @@ export const corp = `<header class="head">
     </section>
 
     <section>
-      <div class="tw">
-        <table class="grid">
+      <div class="fisa-tw">
+        <table class="fisa-grid">
           <caption>Săptămâna de la ____ / ____ până la ____ / ____</caption>
           <thead>
             <tr><th>Ziua</th><th>Trezire</th><th>Prânz</th><th>Seară</th><th>Somn (h)</th><th>Efort</th><th>Prăbușire</th></tr>

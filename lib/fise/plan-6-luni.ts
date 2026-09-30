@@ -47,8 +47,8 @@ export const corp = `<header class="head">
       <p>Aici se întoarce tot programul într-o singură regulă. <strong>Nu începi cu ce te supără cel mai tare. Începi cu etapa cea mai de jos care are scor mic.</strong></p>
       <p>Dacă etapa 1 — mediul — are scor mic, acolo începi, chiar dacă simptomul care te doare pare să fie în altă parte. Luate de jos în sus, etajele de deasupra se așază singure la unii oameni. Invers nu ține: nu poți repara ritmul într-o casă cu mucegai și nu poți repara mintea într-un corp care nu are fier.</p>
       <p>Deci scrii trei lucruri, în ordinea asta:</p>
-      <div class="tw">
-      <table class="fill">
+      <div class="fisa-tw">
+      <table class="fisa-fill">
         <thead><tr><th>#</th><th>Ce fac</th><th>Din ce etapă</th><th>Când încep</th><th>Cum știu că a mers</th></tr></thead>
         <tbody>
           <tr><td>1</td><td></td><td></td><td></td><td></td></tr>

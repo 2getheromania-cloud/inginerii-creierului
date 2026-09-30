@@ -41,7 +41,7 @@ export const corp = `<header class="head">
     <section>
       <h2>Partea a treia: proba calendarului</h2>
       <p>Deschizi calendarul pe ultimele două săptămâni — agendă, telefon, ce ai. Și împarte orele treze pe cele trei valori, plus o coloană „altceva".</p>
-      <table class="fill">
+      <table class="fisa-fill">
         <thead><tr><th>Valoarea</th><th>Ore în ultimele 14 zile</th><th>Ce aș vrea</th></tr></thead>
         <tbody>
           <tr><td>1.</td><td></td><td></td></tr>

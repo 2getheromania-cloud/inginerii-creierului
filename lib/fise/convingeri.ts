@@ -29,7 +29,7 @@ export const corp = `<header class="head">
       <h2>Partea întâi: trei situații, nu o listă</h2>
       <p>Nu începi cu o listă de convingeri gata scrise, din care bifezi. Dacă faci așa, alegi ce sună bine, nu ce e adevărat.</p>
       <p>Începi de la concret. Scrii trei situații din ultimele două săptămâni în care ai făcut ceva ce nu voiai să faci, sau n-ai făcut ceva ce voiai. Nu întâmplări mari. Lucruri mărunte: ai zis „da" la încă o sarcină la ora șase seara. N-ai anulat o întâlnire deși abia te țineai pe picioare. Ai stat până la două noaptea pentru ceva ce putea aștepta.</p>
-      <table class="fill">
+      <table class="fisa-fill">
         <thead><tr><th>Ce s-a întâmplat</th><th>Ce am simțit în corp</th><th>Ce mi-a trecut prin cap în secunda aia</th></tr></thead>
         <tbody>
           <tr><td></td><td></td><td></td></tr>

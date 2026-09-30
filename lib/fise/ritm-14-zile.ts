@@ -38,8 +38,8 @@ export const corp = `<header class="head">
 
     <section>
       <h2>Tabelul de 14 zile</h2>
-      <div class="tw">
-      <table class="fill">
+      <div class="fisa-tw">
+      <table class="fisa-fill">
         <thead><tr><th>Ziua</th><th>Ora trezirii</th><th>Lumină (min)</th><th>Ultima cafea</th><th>Cum am dormit (1–5)</th></tr></thead>
         <tbody>
           <tr><td>1</td><td></td><td></td><td></td><td></td></tr>

@@ -28,7 +28,7 @@ export const corp = `<header class="head">
     <section>
       <h2>Partea întâi — casa</h2>
       <p>Pe camere, în ordinea asta. În fiecare, te uiți în două locuri pe care oamenii nu le văd: <strong>în spatele mobilei lipite de peretele exterior</strong> și <strong>sub chiuvetă</strong>.</p>
-      <table class="ticked">
+      <table class="fisa-ticked">
         <thead><tr><th></th><th>Ce cauți</th><th>Bifezi dacă</th><th>Bifă</th></tr></thead>
         <tbody>
           <tr><td>Baie</td><td>Ventilație</td><td>Nu există ventilator sau fereastră care se deschide</td><td>☐</td></tr>
@@ -47,7 +47,7 @@ export const corp = `<header class="head">
     <section>
       <h2>Partea a doua — ce intră pe gură</h2>
       <p>Trei zile obișnuite, nu una de sărbătoare.</p>
-      <table class="ticked">
+      <table class="fisa-ticked">
         <thead><tr><th>Ce cauți</th><th>Bifezi dacă</th><th>Bifă</th></tr></thead>
         <tbody>
           <tr><td>Mese gătite acasă</td><td>Sub jumătate din ce mănânci într-o zi obișnuită</td><td>☐</td></tr>

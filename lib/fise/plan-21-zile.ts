@@ -35,8 +35,8 @@ export const corp = `<header class="head">
 
     <section>
       <h2>Tabelul</h2>
-      <div class="tw">
-      <table class="fill">
+      <div class="fisa-tw">
+      <table class="fisa-fill">
         <thead><tr><th></th><th>Ce schimb</th><th>Cum știu că am făcut-o</th><th>Bifat</th></tr></thead>
         <tbody>
           <tr><td>Săptămâna 1</td><td></td><td></td><td></td></tr>
