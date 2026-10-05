@@ -9,6 +9,10 @@ const BOOK_SLUG = 'noroi-pe-sandalele-sfintilor'
 const FROM = 'Inginerii Creierului <carte@ingineriicreierului.ro>'
 const FROM_RECONSTRUCTIA = 'Psiholog Narcisa Ispas <carte@ingineriicreierului.ro>'
 const APP_URL = 'https://app.ingineriicreierului.ro'
+const FROM_REDESCHIDE = 'Narcisa Ispas <carte@ingineriicreierului.ro>'
+const REDESCHIDE_PRODUCT_ID = 'prod_VNw3dfYQnsrVDu'
+const REDESCHIDE_ACCES_URL = 'https://reconstruieste-te.ro/acces-redeschide-dosarul/'
+
 
 // Prețurile programului „Cele 7 Etape ale Vindecării".
 // Tratate de app/api/stripe/webhook-7etape/route.ts, care are endpoint propriu.
@@ -116,6 +120,62 @@ function isReconstructia(productName: string) {
   return normalized.includes('RECONSTRUCTIA')
 }
 
+// „Redeschide Dosarul" — microprogramul de pe reconstruieste-te.ro.
+// Nu are carte de descarcat: accesul e o pagina pe site, nu un fisier.
+function isRedeschideDosarul(productName: string) {
+  const normalized = productName
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toUpperCase()
+  return normalized.includes('REDESCHIDE DOSARUL')
+}
+
+function redeschideEmailHtml(name: string) {
+  const prenume = name.trim().split(/\s+/)[0] || ''
+  const salut = prenume ? `Bună, ${prenume},` : 'Bună,'
+  return `
+<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px;color:#1f2937;line-height:1.6">
+<p>${salut}</p>
+<p>Mulțumesc că ai ales să deschizi dosarul. Nu e un gest mic.</p>
+<p>Ai acces complet la cele patru înregistrări și la workbook aici:</p>
+<p><a href="${REDESCHIDE_ACCES_URL}" style="display:inline-block;background:#14342B;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;margin:8px 0">Deschide materialele</a></p>
+<p style="color:#6b7280;font-size:13px">Dacă butonul nu funcționează, copiază linkul: ${REDESCHIDE_ACCES_URL}</p>
+<p><strong>Salvează linkul la favorite.</strong> E calea ta de întoarcere la materiale, iar accesul nu expiră.</p>
+<p>Trei lucruri, înainte să începi:</p>
+<p>Ia lecțiile pe rând, nu toate într-o zi. Fiecare are nevoie de timp ca să se așeze.</p>
+<p>Tipărește workbookul înainte de prima lecție. Nu e un material de citit, e un caiet de lucru — scrii în el, de mână, pe măsură ce mergi prin lecții.</p>
+<p>Dacă o întrebare te blochează, lasă-o și revino la ea. Blocajul e informație, nu eșec.</p>
+<p>Ne vedem în lecția 1.</p>
+<p style="margin-top:24px">Narcisa Ispas<br/>Psiholog clinician · reconstruieste-te.ro</p>
+</div>`
+}
+
+function redeschideEmailText(name: string) {
+  const prenume = name.trim().split(/\s+/)[0] || ''
+  const salut = prenume ? `Bună, ${prenume},` : 'Bună,'
+  return `${salut}
+
+Mulțumesc că ai ales să deschizi dosarul. Nu e un gest mic.
+
+Ai acces complet la cele patru înregistrări și la workbook aici:
+${REDESCHIDE_ACCES_URL}
+
+Salvează linkul la favorite. E calea ta de întoarcere la materiale, iar accesul nu expiră.
+
+Trei lucruri, înainte să începi:
+
+Ia lecțiile pe rând, nu toate într-o zi. Fiecare are nevoie de timp ca să se așeze.
+
+Tipărește workbookul înainte de prima lecție. Nu e un material de citit, e un caiet de lucru — scrii în el, de mână, pe măsură ce mergi prin lecții.
+
+Dacă o întrebare te blochează, lasă-o și revino la ea. Blocajul e informație, nu eșec.
+
+Ne vedem în lecția 1.
+
+Narcisa Ispas
+Psiholog clinician · reconstruieste-te.ro`
+}
+
 export async function POST(req: Request) {
   try {
     const signature = req.headers.get('stripe-signature')
@@ -177,6 +237,49 @@ export async function POST(req: Request) {
     // Ieșim înainte de upsert și înainte de emailul cu cartea.
     if (isSapteEtapePurchase) {
       return NextResponse.json({ received: true, ignored: 'cele-7-etape' })
+    }
+    // „Redeschide Dosarul" — microprogramul de pe reconstruieste-te.ro.
+    // Are pagina proprie de acces, nu o carte: trimitem emailul cu linkul si iesim
+    // inainte de upsert, ca sa nu plece emailul cartii si sa nu se creeze token de download.
+    let isRedeschidePurchase = false
+    try {
+      const rdItems = await stripe().checkout.sessions.listLineItems(session.id, {
+        expand: ['data.price.product'],
+      })
+      isRedeschidePurchase = rdItems.data.some((item) => {
+        const product = item.price?.product
+        const productId =
+          typeof product === 'string'
+            ? product
+            : product && typeof product === 'object' && 'id' in product
+              ? product.id
+              : ''
+        const productName =
+          product && typeof product === 'object' && 'name' in product
+            ? (product.name ?? '')
+            : ''
+        return (
+          productId === REDESCHIDE_PRODUCT_ID ||
+          isRedeschideDosarul(productName || item.description || '')
+        )
+      })
+    } catch (rdErr) {
+      console.error('[stripe webhook] listLineItems (redeschide) error:', (rdErr as Error).message)
+    }
+    if (isRedeschidePurchase) {
+      const resendRd = new Resend(process.env.RESEND_API_KEY)
+      const { error: rdMailError } = await resendRd.emails.send({
+        from: FROM_REDESCHIDE,
+        to: email,
+        subject: 'Ai acces la REDESCHIDE DOSARUL',
+        html: redeschideEmailHtml(name),
+        text: redeschideEmailText(name),
+      })
+      if (rdMailError) {
+        console.error('[stripe webhook] resend (redeschide) error:', rdMailError)
+        return NextResponse.json({ error: 'Email send failed' }, { status: 500 })
+      }
+      return NextResponse.json({ received: true, handled: 'redeschide-dosarul' })
     }
         // Upsert idempotent — dacă session-ul există deja, nu se inserează nimic nou.
         // Identic pentru ambele produse, ca linkul /download/[token] să funcționeze la fel.
