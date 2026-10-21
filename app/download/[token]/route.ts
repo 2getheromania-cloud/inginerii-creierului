@@ -1,5 +1,6 @@
 import { createClient as supa } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { BOOKS, DEFAULT_BOOK_SLUG } from '@/lib/books'
 
 export const runtime = 'nodejs'
 // Ruta generează un signed URL cu expirare scurtă — răspunsul NU trebuie
@@ -8,9 +9,6 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 const BUCKET = 'carti'
-const FILE_PATH = 'Noroi_pe_sandalele_sfintilor_ONLINE.pdf'
-const DOWNLOAD_NAME = 'Noroi pe sandalele sfintilor.pdf'
-const MAX_DOWNLOADS = 5
 // Durata signed URL-ului. Mărită la 300s ca să acopere eventuale latențe
 // de rețea/redirect fără ca link-ul să expire înainte să fie folosit.
 const SIGNED_URL_TTL = 300
@@ -27,7 +25,7 @@ function service() {
 }
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: { token: string } }
 ) {
   try {
@@ -35,7 +33,7 @@ export async function GET(
 
     const { data: purchase, error } = await admin
       .from('purchases')
-      .select('id, download_count')
+      .select('id, download_count, book_slug')
       .eq('download_token', params.token)
       .single()
 
@@ -43,7 +41,12 @@ export async function GET(
       return NextResponse.json({ error: 'Link invalid' }, { status: 404 })
     }
 
-    if ((purchase.download_count ?? 0) >= MAX_DOWNLOADS) {
+    // Cartea cumpărată și formatul cerut (?f=pdf sau ?f=epub).
+    const book = BOOKS[purchase.book_slug] ?? BOOKS[DEFAULT_BOOK_SLUG]
+    const format = new URL(req.url).searchParams.get('f') ?? book.defaultFormat
+    const file = book.files[format] ?? book.files[book.defaultFormat]
+
+    if ((purchase.download_count ?? 0) >= book.maxDownloads) {
       return NextResponse.json(
         { error: 'Limita de descărcări a fost atinsă' },
         { status: 403 }
@@ -53,7 +56,7 @@ export async function GET(
     // Signed URL din bucket-ul privat, cu nume de descărcare prietenos
     const { data: signed, error: signError } = await admin.storage
       .from(BUCKET)
-      .createSignedUrl(FILE_PATH, SIGNED_URL_TTL, { download: DOWNLOAD_NAME })
+      .createSignedUrl(file.path, SIGNED_URL_TTL, { download: file.downloadName })
 
     if (signError || !signed?.signedUrl) {
       console.error('[download] signed url error:', signError?.message)
