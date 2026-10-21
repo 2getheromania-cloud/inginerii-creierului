@@ -50,7 +50,7 @@ export const DEFAULT_BOOK_SLUG = 'noroi-pe-sandalele-sfintilor'
 
 // Linkul Stripe Payment Link pentru „Corpul nu citește Facebook” (99 lei).
 // Se completează după ce linkul e creat în Stripe Dashboard.
-export const CNCF_PAYMENT_LINK = 'https://buy.stripe.com/REPLACE_ME'
+export const CNCF_PAYMENT_LINK = 'https://buy.stripe.com/bJe6oG2XP0M666ScT05gc0k'
 
 // Recunoaște produsul după nume, fără diacritice și majuscule.
 export function isCorpulNuCitesteFacebook(productName: string) {
