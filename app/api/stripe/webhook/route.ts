@@ -190,7 +190,7 @@ function cncfEmailHtml(name: string, token: string) {
   return `
 <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px;color:#1C1713;line-height:1.6">
 <p>${salut}</p>
-<p>Mulțumesc că ai ales <strong>„Corpul nu citește Facebook”</strong>. De acum, data viitoare când primești pe WhatsApp „un sfat de sănătate”, ai cu ce să-l verifici.</p>
+<p>Mulțumesc că ai ales <strong>„Corpul nu citește Facebook”</strong>. De acum, data viitoare când primești pe WhatsApp „un sfat de sănătate”, ai la îndemână un filtru prin care să-l treci.</p>
 <p>Cartea e a ta, în două formate. Alege-l pe cel potrivit:</p>
 <p>
 <a href="${pdf}" style="${btn}">Descarcă PDF</a>

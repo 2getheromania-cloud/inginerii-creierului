@@ -95,7 +95,7 @@ export default function Page() {
         <div className={`${s.narrow} ${s.prose}`}>
           <p className={s.eyebrow}>Știi mesajul acesta</p>
           <h2 className={s.h2}>O linguriță de ceva dimineața și scapi de tiroidă, de balonare, de kilograme.</h2>
-          <p>L-a trimis o prietenă, cu cele mai bune intenții. Și totuși… cine a verificat?</p>
+          <p>L-a trimis o prietenă care îți vrea binele. Și totuși… cine a verificat?</p>
           <p>
             Problema nu e lipsa de informație. E prea multă, toată ambalată la fel de convingător.
             Studiul pe șoareci arată ca studiul pe oameni. Mecanismul din eprubetă sună ca un tratament.
@@ -117,7 +117,7 @@ export default function Page() {
             <div className={s.card}><span className={s.num}>01</span><h3>Povestea</h3>
               <p>Fiecare capitol se deschide cu o întâmplare reală: medicul care a băut bacteria ca să-și dovedească ipoteza, oile din Australia care nu mai fătau, varza murată a căpitanului Cook.</p></div>
             <div className={s.card}><span className={s.num}>02</span><h3>Ce spun studiile</h3>
-              <p>Patru întrebări, de fiecare dată: ce fel de studiu, câți oameni, cât de mare e efectul, cine a știut ce primește. Cu cifrele scrise în text și sursele în note.</p></div>
+              <p>Patru întrebări, de fiecare dată: ce fel de studiu, câți oameni, cât de mare e efectul, cine a știut ce primește. Cifrele sunt scrise în text, iar sursele, în note.</p></div>
             <div className={s.card}><span className={s.num}>03</span><h3>Verdictul</h3>
               <p>Fiecare afirmație primește un verdict și o treaptă pe scara dovezii. Fără „depinde” vag și fără panică.</p></div>
             <div className={s.card}><span className={s.num}>04</span><h3>Ce faci concret</h3>
@@ -193,7 +193,7 @@ export default function Page() {
           <ul className={s.forWho}>
             <li>primești zilnic sfaturi de sănătate și nu mai știi pe care să le crezi;</li>
             <li>ai o tiroidă, o digestie sau o menopauză care te-au trimis deja prin zeci de articole și suplimente;</li>
-            <li>vrei să mergi la medic cu întrebări bune, nu cu capturi de ecran;</li>
+            <li>vrei să ajungi la medic pregătită, cu întrebări bune, nu doar cu un screenshot;</li>
             <li>te-ai săturat să fii tratată ca naivă, dar nici nu ai timp să citești studii în engleză.</li>
           </ul>
         </div>
@@ -222,7 +222,7 @@ export default function Page() {
           <h2 className={s.h2}>Bine de știut</h2>
           <div className={s.faq}>
             <details><summary>Ce primesc, mai exact?</summary>
-              <p>Cartea întreagă în două formate: PDF (circa 600 de pagini, cu cuprins pe care se poate da clic și infograficele în culori) și EPUB, pentru cititoare electronice și aplicații de citit. Le primești pe email, pe adresa folosită la plată, în câteva minute.</p></details>
+              <p>Cartea întreagă în două formate: PDF (circa 600 de pagini, cuprinsul are linkuri spre capitole, iar infograficele sunt color) și EPUB, pentru cititoare electronice și aplicații de citit. Le primești pe email, pe adresa folosită la plată, în câteva minute.</p></details>
             <details><summary>Pot să o citesc pe telefon?</summary>
               <p>Da. PDF-ul se deschide pe orice telefon, tabletă sau calculator. Pe telefon, EPUB-ul e mai comod, pentru că textul se așază după ecran și poți mări litera (de exemplu în Apple Books sau Google Play Books).</p></details>
             <details><summary>Merge pe Kindle?</summary>
