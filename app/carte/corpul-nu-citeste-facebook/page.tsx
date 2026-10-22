@@ -201,7 +201,7 @@ export default function Page() {
 
       <section className={`${s.section} ${s.alt}`}>
         <div className={`${s.wrap} ${s.author}`}>
-          <Image className={s.authorPhoto} src={`${ASSETS}/alin.jpg`} alt="Alin Ispas" width={480} height={480} />
+          <Image className={s.authorPhoto} src={`${ASSETS}/alin-portret.jpg`} alt="Alin Ispas" width={600} height={600} />
           <div>
             <p className={s.eyebrow}>Despre autor</p>
             <h2 className={s.h2}>Alin Ispas</h2>
