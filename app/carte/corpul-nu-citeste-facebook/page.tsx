@@ -264,7 +264,7 @@ export default function Page() {
           <p>
             <a href="https://anpc.ro/ce-este-sal/" target="_blank" rel="noopener" aria-label="Soluționarea alternativă a litigiilor (ANPC)">
               {/* Pictograma SAL oficială, conform Ordinului ANPC nr. 449/2022 */}
-              <img src="https://www.anpc.ro/download/sal/SAL-PICTOGRAMA.png" alt="Soluționarea alternativă a litigiilor" width={201} height={50} loading="lazy" />
+              <img src="/carte/corpul-nu-citeste-facebook/sal-pictograma.png" alt="Soluționarea alternativă a litigiilor" width={201} height={50} loading="lazy" />
             </a>
           </p>
           <p>© 2026 Alin Ispas · Inginerii Creierului · <a className={s.link} href="https://ingineriicreierului.ro">ingineriicreierului.ro</a></p>
