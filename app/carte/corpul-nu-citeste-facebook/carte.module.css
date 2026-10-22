@@ -107,6 +107,8 @@
 .dark .price small { color: #D2AD5C; }
 .footer { border-top: 1px solid var(--line); padding: 30px 0 40px; font-size: .85rem; color: var(--ink2); }
 .footer p { margin: 0 0 8px; }
+.legal { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 4px 0 12px; }
+.legal a { color: var(--brand); font-weight: 600; text-underline-offset: 3px; }
 
 .thanks { padding: 80px 0; text-align: center; }
 .thanks .h1 { font-size: clamp(2.2rem, 5vw, 3.4rem); }

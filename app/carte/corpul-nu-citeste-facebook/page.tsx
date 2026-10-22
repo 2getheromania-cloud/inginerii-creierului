@@ -250,6 +250,17 @@ export default function Page() {
       <footer className={s.footer}>
         <div className={s.wrap}>
           <p>Cartea are scop educativ și nu înlocuiește consultul, diagnosticul sau tratamentul medical. În caz de urgență, sună la 112.</p>
+          <p>
+            Vânzător: LEADERSHIP2GETHER SRL · CUI 34735929 · J21/225/2015 · Str. Nicolae Bălcescu nr. 31, Slobozia, Ialomița ·
+            Contact: <a className={s.link} href="mailto:carte@ingineriicreierului.ro">carte@ingineriicreierului.ro</a>
+          </p>
+          <nav className={s.legal} aria-label="Informații legale">
+            <a href="https://docs.google.com/document/d/1w1F-g4dQPdCkbaHbtDdklnQuS9dZJhu9/edit" target="_blank" rel="noopener">Termeni și condiții</a>
+            <a href="https://docs.google.com/document/d/14YilWzdXV6GMUrSWm5CvCtrzkHg9Yo5M0uAI8jT7J2s/edit" target="_blank" rel="noopener">Politica de confidențialitate (GDPR)</a>
+            <a href="https://docs.google.com/document/d/1pbzOUDRRG_QyOgvWUXKWY1ZWPd_RhKrTS4fhxvSpAME/edit" target="_blank" rel="noopener">Politica de cookie-uri</a>
+            <a href="https://anpc.ro/" target="_blank" rel="noopener">ANPC</a>
+            <a href="https://anpc.ro/ce-este-sal/" target="_blank" rel="noopener">SAL – Soluționarea alternativă a litigiilor</a>
+          </nav>
           <p>© 2026 Alin Ispas · Inginerii Creierului · <a className={s.link} href="https://ingineriicreierului.ro">ingineriicreierului.ro</a></p>
         </div>
       </footer>
