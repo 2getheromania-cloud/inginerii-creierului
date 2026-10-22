@@ -135,3 +135,6 @@
 
 .terms h2 { font-family: var(--font-sans), sans-serif; font-size: 1.05rem; font-weight: 700; color: var(--brand); margin: 28px 0 8px; }
 .terms p { margin: 0 0 12px; }
+
+.terms ul { margin: 0 0 12px; padding-left: 20px; }
+.terms li { margin-bottom: 6px; }

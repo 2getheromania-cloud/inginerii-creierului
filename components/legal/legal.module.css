@@ -1,0 +1,8 @@
+.legal { font-size: .82rem; line-height: 1.55; color: #5E534A; }
+.legal p { margin: 0 0 8px; }
+.legal nav { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 4px 0 12px; }
+.legal a { color: #133D13; font-weight: 600; text-underline-offset: 3px; }
+.pict { display: inline-block; line-height: 0; }
+.pict img { display: block; width: 201px; height: 50px; }
+.dark { color: #cfd8cc; }
+.dark a { color: #F1EAE0; }

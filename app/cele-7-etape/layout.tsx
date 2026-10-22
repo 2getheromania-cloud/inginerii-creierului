@@ -6,6 +6,7 @@
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import LegalFooter from '@/components/legal/LegalFooter'
 
 export const metadata: Metadata = {
   title: 'Cele 7 Etape ale Vindecării',
@@ -38,6 +39,9 @@ export default function LayoutSapteEtape({
       <footer className="mx-auto max-w-3xl px-5 pb-12 text-xs text-[#5E534A]">
         Conținutul programului este educațional și nu înlocuiește consultul
         medical. Nu opri și nu modifica un tratament fără medicul tău.
+        <div className="mt-6">
+          <LegalFooter />
+        </div>
       </footer>
     </div>
   )
