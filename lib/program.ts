@@ -134,7 +134,7 @@ export const GENERAL_MATERIALS = [
     title: 'Teste program',
     icon: '🔬',
     desc: 'Analize și teste recomandate pe parcursul programului.',
-    url: 'https://docs.google.com/document/d/1N84crIydGWBuh_tLLfgmsscBjOv-7_d2HlN8imxpZiE/edit',
+    url: 'https://ingineriicreierului.ro/teste.html',
   },
   {
     title: 'Materiale suport curs',

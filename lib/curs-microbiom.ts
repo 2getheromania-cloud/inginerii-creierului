@@ -64,7 +64,8 @@ const folder = (id: string) => `https://drive.google.com/drive/folders/${id}`
 const doc = (id: string) => `https://docs.google.com/document/d/${id}/edit`
 const site = (cale: string) => `https://ingineriicreierului.ro/wp-content/uploads/${cale}`
 
-const TESTE_SIMPTOMATOLOGIE = doc('1N84crIydGWBuh_tLLfgmsscBjOv-7_d2HlN8imxpZiE')
+// Pagina cu toate cele 5 teste IC, pe site.
+const TESTE_SIMPTOMATOLOGIE = 'https://ingineriicreierului.ro/teste.html'
 const SUPLIMENTE_MICROBIOM = doc('1xD9oMmTr_OD8NotMj_aM0A5yQKiX9ty_MNzwMtA1RhQ')
 const FOLDER_POST_INTERMITENT = folder('1VPBPtgZz33Shuy3uHLSKnHWQmT9-kuM_')
 const FOLDER_BONUS = folder('1ErbCf36lsSfU8scnRN-HlX7uDNqfx5Ka')
@@ -128,7 +129,7 @@ export const SECTIUNI: Sectiune[] = [
       {
         materiale: [
           { titlu: 'Raportarea zilnică în aplicație', descriere: 'Jurnalul zilnic din Dashboard. Acolo se văd progresul și întrebările tale; echipa îl citește săptămânal.', tip: 'pagina', url: '/dashboard' },
-          { titlu: 'Testele de simptomatologie', descriere: 'Se completează acum, la start. Le reiei în săptămâna 16 și la final, ca să vezi diferența negru pe alb.', tip: 'document', url: TESTE_SIMPTOMATOLOGIE },
+          { titlu: 'Testele de simptomatologie', descriere: 'Se completează acum, la start. Le reiei în săptămâna 16 și la final, ca să vezi diferența negru pe alb.', tip: 'pagina', url: TESTE_SIMPTOMATOLOGIE },
           { titlu: 'Suplimente pentru microbiom', descriere: 'Lista completă. Pentru Detox 21, echipa de nutriție îți spune exact ce comanzi.', tip: 'document', url: SUPLIMENTE_MICROBIOM },
           { titlu: 'Suplimente pentru tiroidă', descriere: 'Vitaminele, mineralele și suplimentele prietenoase cu tiroida.', tip: 'document', url: doc('1abH79JfZmD45VVwluyygJzb3gL9UOaHRO6hDCXUylIw') },
           { titlu: 'Raportul zilnic alimentar', descriere: 'Fișa de tipărit, pentru cine preferă hârtia.', tip: 'pdf', url: fisier('1eCZymBsfWMQSOvDQXMrKDEodqc0wJGSF') },
@@ -318,7 +319,7 @@ export const SECTIUNI: Sectiune[] = [
     grupuri: [
       {
         materiale: [
-          { titlu: 'Testele de simptomatologie — reevaluarea', descriere: 'Aceleași teste ca la start. Comparația arată ce s-a schimbat.', tip: 'document', url: TESTE_SIMPTOMATOLOGIE },
+          { titlu: 'Testele de simptomatologie — reevaluarea', descriere: 'Aceleași teste ca la start. Comparația arată ce s-a schimbat.', tip: 'pagina', url: TESTE_SIMPTOMATOLOGIE },
           { titlu: 'Decizia echipei', descriere: 'Post intermitent sau reluarea protocolului de microbiom.', tip: 'pas' },
           { titlu: 'Introducere în postul intermitent', tip: 'video', inLucru: true },
           { titlu: 'Ghidul de introducere în postul intermitent', tip: 'pdf', inLucru: true },
@@ -375,7 +376,7 @@ export const SECTIUNI: Sectiune[] = [
           { titlu: 'Ghidul de mentenanță a microbiomului', tip: 'pdf', saptamana: 23, inLucru: true },
           { titlu: 'Protocolul pentru stres, vacanțe sau regres temporar', tip: 'pdf', saptamana: 23, inLucru: true },
           { titlu: 'Protocoalele bonus potrivite profilului tău', tip: 'pagina', url: '/curs/protocoale-bonus', saptamana: 23 },
-          { titlu: 'Testele de simptomatologie — evaluarea finală', descriere: 'Comparația cu startul și cu săptămâna 16.', tip: 'document', url: TESTE_SIMPTOMATOLOGIE, saptamana: 23 },
+          { titlu: 'Testele de simptomatologie — evaluarea finală', descriere: 'Comparația cu startul și cu săptămâna 16.', tip: 'pagina', url: TESTE_SIMPTOMATOLOGIE, saptamana: 23 },
           { titlu: 'Analizele de follow-up recomandate', tip: 'document', saptamana: 23, inLucru: true },
         ],
       },
