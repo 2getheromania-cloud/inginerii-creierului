@@ -104,7 +104,28 @@ export default function Navbar({ profile }: { profile: Profile }) {
   const router   = useRouter()
   const supabase = createClient()
   const isAdmin  = profile.role === 'admin'
-  const nav      = isAdmin ? ADMIN_NAV : CURSANT_NAV
+
+  // Tab-ul „Cele 7 Etape": adminul îl vede mereu, cursantul doar dacă are o
+  // înscriere activă la program (RLS „own enrollment" îi arată doar rândul lui).
+  const [are7Etape, setAre7Etape] = useState(false)
+  useEffect(() => {
+    if (isAdmin) return
+    supabase
+      .from('enrollments')
+      .select('id, programs!inner(slug)')
+      .eq('programs.slug', 'cele-7-etape')
+      .eq('status', 'active')
+      .limit(1)
+      .then(({ data }) => setAre7Etape(!!data && data.length > 0), () => {})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin])
+
+  const baza = isAdmin ? ADMIN_NAV : CURSANT_NAV
+  const nav  = isAdmin || are7Etape
+    ? baza.flatMap(item =>
+        item.href === '/curs' ? [item, { href: '/cele-7-etape', label: 'Cele 7 Etape' }] : [item]
+      )
+    : baza
 
   const [unreadPrivate, setUnreadPrivate]     = useState(0)
   const [unreadCommunity, setUnreadCommunity] = useState(0)
