@@ -8,6 +8,7 @@ import type { Profile } from '@/lib/types'
 
 const CURSANT_NAV = [
   { href: '/dashboard',  label: 'Dashboard' },
+  { href: '/curs',       label: 'Cursul' },
   { href: '/chat',       label: 'Comunitate' },
   { href: '/mesaje',     label: 'Mesaje' },
   { href: '/intalniri',  label: 'Întâlniri' },
@@ -20,6 +21,7 @@ const CURSANT_NAV = [
 
 const ADMIN_NAV = [
   { href: '/admin',              label: 'Cursanți' },
+  { href: '/curs',               label: 'Cursul' },
   { href: '/chat',               label: 'Comunitate' },
   { href: '/mesaje',             label: 'Mesaje' },
   { href: '/intalniri',          label: 'Întâlniri' },

@@ -1,11 +1,14 @@
 import type { ProgramPhase, ProtocolFlags } from './types'
 
+// Calendarul din contract: 16 săptămâni intensive + 8 de monitorizare.
+// Săptămâna 16 (evaluarea) rămâne în Faza 3; postul intermitent (Faza 4)
+// începe în săptămâna 17, după decizia echipei.
 export function getPhaseFromWeek(week: number): ProgramPhase {
   if (week <= 3)  return 'Detox 21'
-  if (week <= 5)  return 'Tranziție'
-  if (week <= 10) return 'Faza 1'
-  if (week <= 15) return 'Faza 2'
-  if (week <= 20) return 'Faza 3'
+  if (week <= 4)  return 'Tranziție'
+  if (week <= 7)  return 'Faza 1'
+  if (week <= 11) return 'Faza 2'
+  if (week <= 16) return 'Faza 3'
   return 'Faza 4'
 }
 
@@ -146,11 +149,11 @@ export const GENERAL_MATERIALS = [
 // ---------------------------------------------------------------
 export const PROGRAM_PHASES: { phase: ProgramPhase; weeks: string }[] = [
   { phase: 'Detox 21',  weeks: 'Săpt. 1–3'   },
-  { phase: 'Tranziție', weeks: 'Săpt. 4–5'   },
-  { phase: 'Faza 1',    weeks: 'Săpt. 5–10'  },
-  { phase: 'Faza 2',    weeks: 'Săpt. 10–15' },
-  { phase: 'Faza 3',    weeks: 'Săpt. 15–20' },
-  { phase: 'Faza 4',    weeks: 'Săpt. 20–24' },
+  { phase: 'Tranziție', weeks: 'Săpt. 4'     },
+  { phase: 'Faza 1',    weeks: 'Săpt. 5–7'   },
+  { phase: 'Faza 2',    weeks: 'Săpt. 8–11'  },
+  { phase: 'Faza 3',    weeks: 'Săpt. 12–16' },
+  { phase: 'Faza 4',    weeks: 'Săpt. 17–24' },
 ]
 
 // ---------------------------------------------------------------

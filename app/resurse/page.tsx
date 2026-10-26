@@ -36,6 +36,18 @@ export default async function ResursePage() {
       <div className="space-y-10">
         <h1 className="text-2xl font-bold text-gray-900">Resurse program</h1>
 
+        {/* ── Cursul pas cu pas ── */}
+        <a
+          href="/curs"
+          className="block rounded-2xl bg-[#133D13] px-6 py-5 text-[#F1EAE0] shadow-sm hover:bg-[#1D531D] transition-colors"
+        >
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#B08A3C]">Cursul</p>
+          <p className="mt-1 text-lg font-semibold">Programul pas cu pas, săptămână de săptămână →</p>
+          <p className="mt-1 text-sm text-[#F1EAE0]/75">
+            Cursurile, rețetele, ghidurile și înregistrările, în ordinea în care se parcurg.
+          </p>
+        </a>
+
         {/* ── Faza curentă + butoane rețete ── */}
         <div className="card border-l-4 border-brand-500">
           <div className="flex flex-wrap items-start justify-between gap-4">
