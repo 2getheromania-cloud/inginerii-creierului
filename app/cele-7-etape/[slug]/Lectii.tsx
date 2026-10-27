@@ -13,6 +13,14 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { durataExacta, type Lectie } from '@/lib/sapte-etape'
 
+// video_id e fie „123456789", fie „123456789:abcdef1234" pentru clipurile
+// Vimeo „Unlisted", care se pot încorpora doar cu codul lor (parametrul h).
+function urlPlayer(videoId: string): string {
+  const [id, h] = videoId.split(':')
+  const cod = h ? `h=${h}&` : ''
+  return `https://player.vimeo.com/video/${id}?${cod}dnt=1&title=0&byline=0&portrait=0&autoplay=1`
+}
+
 export default function Lectii({
   lectii,
   vazuteInitial,
@@ -157,7 +165,7 @@ export default function Lectii({
                     <div className="mt-3 overflow-hidden rounded-lg bg-black">
                       <div className="relative w-full pt-[56.25%]">
                         <iframe
-                          src={`https://player.vimeo.com/video/${l.video_id}?dnt=1&title=0&byline=0&portrait=0&autoplay=1`}
+                          src={urlPlayer(l.video_id)}
                           title={l.title}
                           allow="autoplay; fullscreen; picture-in-picture"
                           allowFullScreen

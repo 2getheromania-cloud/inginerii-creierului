@@ -117,7 +117,12 @@ from (values
   ('etapa-3-ritmuri', 4, 'Cofeina și alcoolul: două substanțe, două efecte diferite', '1230663408',  391),
   ('etapa-3-ritmuri', 5, 'Ce funcționează pentru insomnie, în ordinea dovezii',     '1230681130',  430),
   ('etapa-3-ritmuri', 6, 'Sistemul nervos: ce măsoară HRV și ce nu',                '1230690960',  413),
-  ('etapa-3-ritmuri', 7, 'Protocolul de 14 zile pentru etajul 3',                   '1230715088',  374)
+  ('etapa-3-ritmuri', 7, 'Protocolul de 14 zile pentru etajul 3',                   '1230715088',  374),
+  -- Modulul 6 (Narcisa). 6.2 e „Unlisted" pe Vimeo: id-ul poartă și codul h.
+  ('etapa-4-emotional', 1, 'Ce înseamnă „stres" când vorbim despre corp',            '1234013134',  713),
+  ('etapa-4-emotional', 2, 'Ce a arătat, de fapt, studiul ACE',                      '1234430420:19b28ea1b5', 649),
+  ('etapa-4-emotional', 3, 'Cortizolul: ce se poate măsura și ce se vinde',          '1234386120',  512),
+  ('etapa-4-emotional', 4, 'Teoria polivagală: de ce o auzi peste tot și ce spune dovada', '1235408400', 492)
 ) as v(module_slug, position, title, video_id, secs)
 join m on m.slug = v.module_slug
 on conflict (module_id, position) do update
