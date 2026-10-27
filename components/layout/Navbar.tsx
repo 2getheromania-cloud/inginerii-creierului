@@ -12,6 +12,7 @@ const CURSANT_NAV = [
   { href: '/chat',       label: 'Comunitate' },
   { href: '/mesaje',     label: 'Mesaje' },
   { href: '/intalniri',  label: 'Întâlniri' },
+  { href: '/atelier',    label: 'Atelierul de luni' },
   { href: '/biblioteca', label: 'Bibliotecă' },
   { href: '/documente',  label: 'Documente' },
   { href: '/istoric',    label: 'Istoric' },
@@ -25,6 +26,7 @@ const ADMIN_NAV = [
   { href: '/chat',               label: 'Comunitate' },
   { href: '/mesaje',             label: 'Mesaje' },
   { href: '/intalniri',          label: 'Întâlniri' },
+  { href: '/atelier',            label: 'Atelierul de luni' },
   { href: '/biblioteca',         label: 'Bibliotecă' },
   { href: '/documente',          label: 'Documente' },
   { href: '/resurse',            label: 'Resurse' },
@@ -32,6 +34,8 @@ const ADMIN_NAV = [
   { href: '/admin/rapoarte',     label: 'Rapoarte' },
   { href: '/admin/setari',       label: 'Setări' },
 ]
+
+const PAGINA_VANZARE_7_ETAPE = 'https://ingineriicreierului.ro/cele-7-etape/'
 
 interface ToastItem {
   id: string
@@ -105,8 +109,8 @@ export default function Navbar({ profile }: { profile: Profile }) {
   const supabase = createClient()
   const isAdmin  = profile.role === 'admin'
 
-  // Tab-ul „Cele 7 Etape": adminul îl vede mereu, cursantul doar dacă are o
-  // înscriere activă la program (RLS „own enrollment" îi arată doar rândul lui).
+  // Tab-ul „Cele 7 Etape" e vizibil tuturor. Adminul și cursanții cu înscriere
+  // activă intră în platformă; ceilalți ajung pe pagina de vânzare a programului.
   const [are7Etape, setAre7Etape] = useState(false)
   useEffect(() => {
     if (isAdmin) return
@@ -120,12 +124,12 @@ export default function Navbar({ profile }: { profile: Profile }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin])
 
+  const tab7Etape = {
+    href: isAdmin || are7Etape ? '/cele-7-etape' : PAGINA_VANZARE_7_ETAPE,
+    label: 'Cele 7 Etape',
+  }
   const baza = isAdmin ? ADMIN_NAV : CURSANT_NAV
-  const nav  = isAdmin || are7Etape
-    ? baza.flatMap(item =>
-        item.href === '/curs' ? [item, { href: '/cele-7-etape', label: 'Cele 7 Etape' }] : [item]
-      )
-    : baza
+  const nav  = baza.flatMap(item => (item.href === '/curs' ? [item, tab7Etape] : [item]))
 
   const [unreadPrivate, setUnreadPrivate]     = useState(0)
   const [unreadCommunity, setUnreadCommunity] = useState(0)
@@ -419,6 +423,7 @@ export default function Navbar({ profile }: { profile: Profile }) {
                 <Link
                   key={href}
                   href={href}
+                  {...(href.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
                   className={cn(
                     'relative flex-shrink-0 px-3 py-2 text-sm font-medium transition-colors whitespace-nowrap rounded-lg',
                     isActive
