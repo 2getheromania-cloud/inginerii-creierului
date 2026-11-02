@@ -9,7 +9,9 @@ import { getOrCreateProfile } from '@/lib/supabase/profile'
 
 export const dynamic = 'force-dynamic'
 
-const ATELIER_URL = 'https://ingineriicreierului.ro/wp-content/uploads/2026/10/Atelierul-de-luni.html'
+// Pagina stă acum în aplicație (public/atelier), ca să poată fi actualizată
+// odată cu restul codului. Copia veche de pe site nu mai e folosită.
+const ATELIER_URL = '/atelier/atelierul-de-luni.html'
 
 export default async function PaginaAtelier() {
   const supabase = createClient()
