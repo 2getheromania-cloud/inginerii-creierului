@@ -92,7 +92,7 @@ export const GENERAL_MATERIALS = [
     title: 'Ghid nutriție',
     icon: '🥗',
     desc: 'Principiile 4R ale programului și protocolul de microbiom.',
-    url: 'https://docs.google.com/document/d/1Q7Z_-ussigexqSLv0upI2MCVUs5WPKrOe8wk9Vu9-w8/edit',
+    url: 'https://docs.google.com/document/d/1W0HEONKdmXXh9sbSBRtogYmRJT0FDg5ISx9ThZHgVZg/edit',
   },
   {
     title: 'Suplimente Microbiom',
