@@ -60,3 +60,13 @@ export function isCorpulNuCitesteFacebook(productName: string) {
     .toUpperCase()
   return normalized.includes('CORPUL NU CITESTE FACEBOOK')
 }
+
+// Cine vede tab-ul „Cartea" din aplicație și poate deschide PDF-ul prin /cartea.
+// Se compară pe id-ul contului (auth.users); numele nu stau aici, repo-ul e public.
+export const CARTE_ACCES_USER_IDS: readonly string[] = [
+  'efddf164-138e-41fe-87fe-bca9f63f9dcc',
+]
+
+export function areAccesLaCarte(userId: string): boolean {
+  return CARTE_ACCES_USER_IDS.includes(userId)
+}

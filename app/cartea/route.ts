@@ -1,12 +1,12 @@
-// /cartea — PDF-ul cărții „Corpul nu citește Facebook" pentru cursanții din
-// aplicație. Fișierul stă în bucket-ul privat „carti"; ruta verifică sesiunea
+// /cartea — PDF-ul cărții „Corpul nu citește Facebook" pentru conturile cu acces
+// (lib/books.ts). Fișierul stă în bucket-ul privat „carti"; ruta verifică sesiunea
 // și profilul, apoi trimite la un link semnat, valabil câteva minute, care
 // deschide PDF-ul în browser (de acolo se poate și salva).
 
 import { createClient as supa } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { BOOKS } from '@/lib/books'
+import { BOOKS, areAccesLaCarte } from '@/lib/books'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -39,14 +39,17 @@ export async function GET(req: Request) {
 
   const admin = service()
 
-  // Doar cursanții programului (cei cu profil activ) și adminii.
+  // Doar conturile din lista din lib/books.ts (cu profil activ) și adminii,
+  // ca să poată verifica linkul.
   const { data: profil } = await admin
     .from('profiles')
-    .select('id, active')
+    .select('id, active, role')
     .eq('id', user.id)
     .maybeSingle()
-  if (!profil || profil.active === false) {
-    return faraCache(NextResponse.redirect(new URL('/', req.url)))
+  const permis = !!profil && profil.active !== false &&
+    (areAccesLaCarte(user.id) || profil.role === 'admin')
+  if (!permis) {
+    return faraCache(NextResponse.redirect(new URL('/dashboard', req.url)))
   }
 
   const fisier = CARTE.files.pdf

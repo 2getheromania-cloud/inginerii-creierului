@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import type { Profile } from '@/lib/types'
+import { areAccesLaCarte } from '@/lib/books'
 
 const CURSANT_NAV = [
   { href: '/dashboard',  label: 'Dashboard' },
@@ -132,9 +133,10 @@ export default function Navbar({ profile }: { profile: Profile }) {
     label: 'Cele 7 Etape',
   }
   const baza = isAdmin ? ADMIN_NAV : CURSANT_NAV
-  const tabCarte = { href: PAGINA_CARTII, label: 'Cartea' }
+  // „Cartea" apare doar conturilor din lista din lib/books.ts.
+  const tabCarte = areAccesLaCarte(profile.id) ? [{ href: PAGINA_CARTII, label: 'Cartea' }] : []
   const nav  = baza.flatMap(item =>
-    item.href === '/curs' ? [item, tab7Etape, tabCarte] : [item]
+    item.href === '/curs' ? [item, tab7Etape, ...tabCarte] : [item]
   )
 
   const [unreadPrivate, setUnreadPrivate]     = useState(0)
