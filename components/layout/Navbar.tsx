@@ -36,6 +36,8 @@ const ADMIN_NAV = [
 ]
 
 const PAGINA_VANZARE_7_ETAPE = 'https://ingineriicreierului.ro/cele-7-etape/'
+// Pagina cărții „Corpul nu citește Facebook" are cadrul ei, așa că se deschide în tab nou.
+const PAGINA_CARTII = 'https://app.ingineriicreierului.ro/carte/corpul-nu-citeste-facebook'
 
 interface ToastItem {
   id: string
@@ -129,7 +131,10 @@ export default function Navbar({ profile }: { profile: Profile }) {
     label: 'Cele 7 Etape',
   }
   const baza = isAdmin ? ADMIN_NAV : CURSANT_NAV
-  const nav  = baza.flatMap(item => (item.href === '/curs' ? [item, tab7Etape] : [item]))
+  const tabCarte = { href: PAGINA_CARTII, label: 'Cartea' }
+  const nav  = baza.flatMap(item =>
+    item.href === '/curs' ? [item, tab7Etape, tabCarte] : [item]
+  )
 
   const [unreadPrivate, setUnreadPrivate]     = useState(0)
   const [unreadCommunity, setUnreadCommunity] = useState(0)
