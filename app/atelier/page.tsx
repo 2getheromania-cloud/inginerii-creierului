@@ -6,12 +6,12 @@ import { redirect } from 'next/navigation'
 import AppShell from '@/components/layout/AppShell'
 import { createClient } from '@/lib/supabase/server'
 import { getOrCreateProfile } from '@/lib/supabase/profile'
+import { areAccesLaAtelier } from '@/lib/atelier/acces'
 
 export const dynamic = 'force-dynamic'
 
-// Pagina stă acum în aplicație (public/atelier), ca să poată fi actualizată
-// odată cu restul codului. Copia veche de pe site nu mai e folosită.
-const ATELIER_URL = '/atelier/atelierul-de-luni.html'
+// Conținutul vine din /atelier/continut, care verifică și el contul.
+const ATELIER_URL = '/atelier/continut'
 
 export default async function PaginaAtelier() {
   const supabase = createClient()
@@ -22,6 +22,8 @@ export default async function PaginaAtelier() {
 
   const profile = await getOrCreateProfile(user.id, user.email!)
   if (!profile) redirect('/')
+  // Atelierul e doar pentru contul din lib/atelier/acces.ts.
+  if (!areAccesLaAtelier(user.email)) redirect('/dashboard')
 
   return (
     <AppShell profile={profile}>

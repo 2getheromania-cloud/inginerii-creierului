@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import type { Profile } from '@/lib/types'
 import { areAccesLaCarte } from '@/lib/books'
+import { areAccesLaAtelier } from '@/lib/atelier/acces'
 
 const CURSANT_NAV = [
   { href: '/dashboard',  label: 'Dashboard' },
@@ -132,7 +133,10 @@ export default function Navbar({ profile }: { profile: Profile }) {
     href: isAdmin || are7Etape ? '/cele-7-etape' : PAGINA_VANZARE_7_ETAPE,
     label: 'Cele 7 Etape',
   }
-  const baza = isAdmin ? ADMIN_NAV : CURSANT_NAV
+  // „Atelierul de luni" apare doar contului din lib/atelier/acces.ts.
+  const baza = (isAdmin ? ADMIN_NAV : CURSANT_NAV).filter(
+    item => item.href !== '/atelier' || areAccesLaAtelier(profile.email)
+  )
   // „Cartea" apare doar conturilor din lista din lib/books.ts.
   const tabCarte = areAccesLaCarte(profile.id) ? [{ href: PAGINA_CARTII, label: 'Cartea' }] : []
   const nav  = baza.flatMap(item =>
