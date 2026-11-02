@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import type { Profile } from '@/lib/types'
+import { CNCF_PAYMENT_LINK } from '@/lib/books'
 
 const CURSANT_NAV = [
   { href: '/dashboard',  label: 'Dashboard' },
@@ -36,8 +37,9 @@ const ADMIN_NAV = [
 ]
 
 const PAGINA_VANZARE_7_ETAPE = 'https://ingineriicreierului.ro/cele-7-etape/'
-// Pagina cărții „Corpul nu citește Facebook" are cadrul ei, așa că se deschide în tab nou.
-const PAGINA_CARTII = 'https://app.ingineriicreierului.ro/carte/corpul-nu-citeste-facebook'
+// Tab-ul „Cartea" duce direct la plata cărții „Corpul nu citește Facebook"
+// (linkul Stripe din lib/books.ts), în tab nou.
+const PAGINA_CARTII = CNCF_PAYMENT_LINK
 
 interface ToastItem {
   id: string
