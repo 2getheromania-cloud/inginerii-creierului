@@ -56,6 +56,19 @@ export default async function BibliotecaPage() {
           )}
         </div>
 
+        <a
+          href="https://www.youtube.com/@ingineriicreierului/streams"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="card flex items-center justify-between gap-4 hover:shadow-md transition-shadow"
+        >
+          <div>
+            <p className="font-semibold text-gray-900">Toate live-urile Inginerii Creierului</p>
+            <p className="text-gray-500 text-sm mt-0.5">Înregistrările transmisiunilor live, pe canalul nostru de YouTube</p>
+          </div>
+          <span className="btn-secondary text-sm whitespace-nowrap">Deschide pe YouTube →</span>
+        </a>
+
         <BibliotecaFilters videos={videos} />
       </div>
     </AppShell>
