@@ -305,13 +305,26 @@ export default function MesajeClient({ conversationId, userId }: Props) {
     try {
       const form = new FormData()
       form.append('file', file)
-      const res = await fetch('/api/chat-images', { method: 'POST', body: form })
-      const data = await res.json()
-      if (!res.ok) { setError(data.error ?? 'Eroare la upload.'); return }
+      // PDF-urile (analize etc.) merg în Documente — spațiu privat, nu în bucket-ul public de imagini
+      const ePdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name)
+      let continut: string
+      if (ePdf) {
+        if (file.size > 10 * 1024 * 1024) { setError('Fișierul depășește 10 MB.'); return }
+        form.append('user_id', userId)
+        const res = await fetch('/api/documents', { method: 'POST', body: form })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) { setError(data.error ?? 'Eroare la încărcare.'); return }
+        continut = `📄 Am încărcat documentul „${file.name}” în secțiunea Documente:\nhttps://app.ingineriicreierului.ro/documente`
+      } else {
+        const res = await fetch('/api/chat-images', { method: 'POST', body: form })
+        const data = await res.json()
+        if (!res.ok) { setError(data.error ?? 'Eroare la upload.'); return }
+        continut = data.url
+      }
       const msgRes = await fetch(`/api/conversations/${conversationId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: data.url }),
+        body: JSON.stringify({ content: continut }),
       })
       if (!msgRes.ok) {
         const d = await msgRes.json().catch(() => ({}))
@@ -428,14 +441,14 @@ export default function MesajeClient({ conversationId, userId }: Props) {
         </div>
       )}
 
-      <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp" className="hidden" onChange={handleImageUpload} />
+      <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp,application/pdf,.pdf" className="hidden" onChange={handleImageUpload} />
       <form onSubmit={handleSend} className="border-t border-gray-100 bg-white px-3 py-3 flex gap-2 items-end flex-shrink-0">
         <button type="button" onClick={() => setSearchOpen(o => !o)}
           className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-50 active:bg-gray-100 transition-colors flex-shrink-0"
           title="Caută în mesaje">🔍</button>
         <button type="button" onClick={() => imageInputRef.current?.click()} disabled={uploading}
           className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-50 active:bg-gray-100 transition-colors flex-shrink-0 disabled:opacity-40"
-          title="Trimite imagine">📎</button>
+          title="Trimite imagine sau PDF">📎</button>
         {uploading && <span className="text-xs text-gray-400 self-center">Se trimite...</span>}
         <textarea
           ref={textareaRef}

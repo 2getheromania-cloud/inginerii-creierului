@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   const file = form.get('file') as File | null
   if (!file || file.size === 0) return NextResponse.json({ error: 'Niciun fișier selectat.' }, { status: 400 })
   if (file.size > MAX_BYTES) return NextResponse.json({ error: 'Imaginea depășește 5 MB.' }, { status: 400 })
-  if (!ALLOWED.includes(file.type)) return NextResponse.json({ error: 'Tip nepermis. Folosiți JPG, PNG, GIF sau WebP.' }, { status: 400 })
+  if (!ALLOWED.includes(file.type)) return NextResponse.json({ error: 'Tip nepermis. Imaginile pot fi JPG, PNG, GIF sau WebP; PDF-urile se încarcă în secțiunea Documente.' }, { status: 400 })
 
   const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
   const path = `chat/${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
