@@ -36,6 +36,7 @@ export default async function AdminPage() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <h1 className="text-2xl font-bold text-gray-900">Dashboard Admin</h1>
           <div className="flex flex-wrap gap-2">
+            <Link href="/admin/resetarea-somnului" className="btn-secondary text-sm">Resetarea Somnului</Link>
             <Link href="/admin/mesaje"         className="btn-secondary text-sm">Mesaje</Link>
             <Link href="/admin/administratori" className="btn-secondary text-sm">Administratori</Link>
             <Link href="/admin/notificari"     className="btn-secondary text-sm">Notificări</Link>
