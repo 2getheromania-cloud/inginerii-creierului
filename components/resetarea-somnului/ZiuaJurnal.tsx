@@ -69,7 +69,7 @@ export default function ZiuaJurnal({
         ))}
       </ul>
 
-      <div className="mt-6 grid gap-5 sm:grid-cols-3">
+      <div className="mt-6 grid gap-x-8 gap-y-5 sm:grid-cols-2">
         <Scala
           eticheta="Cum am dormit azi-noapte"
           valoare={intrare.somn}
@@ -86,7 +86,7 @@ export default function ZiuaJurnal({
             type="time"
             value={intrare.trezire ?? ''}
             onChange={e => schimba({ ...intrare, trezire: e.target.value || undefined })}
-            className="mt-2 h-11 w-full rounded-lg border border-[#CFC2AC] bg-white px-3 tabular-nums"
+            className="mt-2 h-11 w-full max-w-[244px] rounded-lg border border-[#CFC2AC] bg-white px-3 tabular-nums"
           />
         </label>
       </div>
@@ -129,7 +129,7 @@ function Scala({
           </button>
         ))}
       </div>
-      <div className="mt-1 flex justify-between text-[0.7rem] text-[#5E534A]">
+      <div className="mt-1 flex max-w-[244px] justify-between text-[0.7rem] text-[#5E534A]">
         <span>prost</span>
         <span>foarte bine</span>
       </div>
