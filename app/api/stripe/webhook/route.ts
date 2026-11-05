@@ -300,6 +300,27 @@ export async function POST(req: Request) {
     if (isSapteEtapePurchase) {
       return NextResponse.json({ received: true, ignored: 'cele-7-etape' })
     }
+    // Orice preț trecut în tabelul stripe_prices ține de platforma de programe
+    // și e livrat de webhook-7etape (de exemplu „Resetarea Somnului").
+    // Fără verificarea asta, plata ar ajunge mai jos și omul ar primi emailul
+    // cu cartea „Noroi pe sandalele sfinților".
+    try {
+      const plItems = await stripe().checkout.sessions.listLineItems(session.id, { limit: 10 })
+      const plIds = plItems.data.map(i => i.price?.id).filter((x): x is string => !!x)
+      if (plIds.length > 0) {
+        const { data: plRows } = await service()
+          .from('stripe_prices')
+          .select('price_id, program_slug')
+          .in('price_id', plIds)
+        if (plRows && plRows.length > 0) {
+          return NextResponse.json({ received: true, ignored: plRows[0].program_slug })
+        }
+      }
+    } catch (plErr) {
+      // 500 → Stripe reîncearcă. Mai bine o întârziere decât o carte trimisă greșit.
+      console.error('[stripe webhook] stripe_prices lookup error:', (plErr as Error).message)
+      return NextResponse.json({ error: 'price lookup failed' }, { status: 500 })
+    }
     // „Redeschide Dosarul" — microprogramul de pe reconstruieste-te.ro.
     // Are pagina proprie de acces, nu o carte: trimitem emailul cu linkul si iesim
     // inainte de upsert, ca sa nu plece emailul cartii si sa nu se creeze token de download.

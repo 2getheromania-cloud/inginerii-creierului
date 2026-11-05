@@ -188,7 +188,7 @@ async function handleCheckout(session: Stripe.Checkout.Session) {
 
   await limiteazaRatele(session, price.installments)
 
-  await sendMagicLink(email)
+  await sendMagicLink(email, price.program_slug)
 }
 
 // Plata în rate e, în Stripe, un abonament lunar obișnuit — și un abonament
@@ -257,7 +257,14 @@ async function findOrCreateUser(email: string): Promise<string> {
 
 // Folosește exact fluxul de magic link deja configurat pentru dashboard,
 // cu SMTP-ul din Supabase. Nimic nou de conectat.
-async function sendMagicLink(email: string) {
+// Pagina de aterizare a fiecărui program. Fiecare are ruta lui /intrare,
+// care preia sesiunea și duce omul exact în programul pe care l-a plătit.
+const INTRARE: Record<string, string> = {
+  'cele-7-etape': '/cele-7-etape/intrare',
+  'resetarea-somnului': '/resetarea-somnului/intrare',
+}
+
+async function sendMagicLink(email: string, programSlug: string) {
   const anon = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -267,7 +274,7 @@ async function sendMagicLink(email: string) {
     email,
     options: {
       shouldCreateUser: false,
-      // ATENȚIE: /cele-7-etape/intrare, NU /cele-7-etape.
+      // ATENȚIE: /<program>/intrare, NU /<program>.
       //
       // Supabase trimite omul la adresa asta cu sesiunea în coadă — token-uri
       // în fragment, sau ?code=. Cineva trebuie să le preia și să le schimbe
@@ -276,7 +283,7 @@ async function sendMagicLink(email: string) {
       //
       // Nici /auth/confirm și nici /auth/callback nu merg aici: amândouă
       // sfârșesc cu redirect către /dashboard, adică spre programul de 6 luni.
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/cele-7-etape/intrare`,
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}${INTRARE[programSlug] ?? INTRARE['cele-7-etape']}`,
     },
   })
   // Emailul nu blochează accesul: contul există, omul poate cere singur link nou.

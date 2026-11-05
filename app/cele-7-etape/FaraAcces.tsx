@@ -8,8 +8,11 @@ import Link from 'next/link'
 
 export default function FaraAcces({
   motiv,
+  numeProgram = 'Cele 7 Etape ale Vindecării',
 }: {
   motiv: 'neautentificat' | 'neinscris'
+  // Componenta e folosită și de „Resetarea Somnului"; textul diferă doar prin nume.
+  numeProgram?: string
 }) {
   if (motiv === 'neautentificat') {
     return (
@@ -39,8 +42,7 @@ export default function FaraAcces({
     <div className="max-w-prose">
       <h1 className="font-serif text-3xl">Contul tău nu e înscris aici</h1>
       <p className="mt-4">
-        Ești autentificat, dar contul acesta nu are o înscriere activă la „Cele
-        7 Etape ale Vindecării".
+        Ești autentificat, dar contul acesta nu are o înscriere activă la „{numeProgram}".
       </p>
       <p className="mt-4">
         Cel mai des se întâmplă dintr-un singur motiv: plata s-a făcut cu altă

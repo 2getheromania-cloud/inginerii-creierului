@@ -18,9 +18,13 @@ import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-const DESTINATIE = '/cele-7-etape'
-
-export default function Intrare() {
+// Folosită și de „Resetarea Somnului", care o montează cu altă destinație.
+export default function Intrare({
+  destinatie = '/cele-7-etape',
+}: {
+  destinatie?: string
+} = {}) {
+  const DESTINATIE = destinatie
   const searchParams = useSearchParams()
   const gata = useRef(false)
   const [eroare, setEroare] = useState<string | null>(null)

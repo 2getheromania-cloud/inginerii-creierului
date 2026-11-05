@@ -55,9 +55,19 @@ export type Resursa = {
 
 /** Toate modulele programului, deschise sau nu. Listă goală = nu e înscris. */
 export async function getModule(supabase: SupabaseClient): Promise<ModulRand[]> {
+  // my_modules întoarce modulele TUTUROR programelor omului. Fără filtrul pe
+  // program, cine are și „Resetarea Somnului" ar vedea lecțiile de somn
+  // amestecate printre cele 12 module.
+  const { data: program } = await supabase
+    .from('programs')
+    .select('id')
+    .eq('slug', PROGRAM_SLUG)
+    .maybeSingle()
+  if (!program) return []
   const { data, error } = await supabase
     .from('my_modules')
     .select('*')
+    .eq('program_id', program.id)
     .order('position')
   if (error) throw error
   return (data ?? []) as ModulRand[]

@@ -129,6 +129,21 @@ export default function Navbar({ profile }: { profile: Profile }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin])
 
+  // „Resetarea Somnului" apare doar celor înscriși la program (și adminului,
+  // dacă are o înscriere de test).
+  const [areSomn, setAreSomn] = useState(false)
+  useEffect(() => {
+    supabase
+      .from('enrollments')
+      .select('id, programs!inner(slug)')
+      .eq('programs.slug', 'resetarea-somnului')
+      .eq('status', 'active')
+      .limit(1)
+      .then(({ data }) => setAreSomn(!!data && data.length > 0), () => {})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const tabSomn = areSomn ? [{ href: '/resetarea-somnului', label: 'Resetarea Somnului' }] : []
+
   const tab7Etape = {
     href: isAdmin || are7Etape ? '/cele-7-etape' : PAGINA_VANZARE_7_ETAPE,
     label: 'Cele 7 Etape',
@@ -140,7 +155,7 @@ export default function Navbar({ profile }: { profile: Profile }) {
   // „Cartea" apare doar conturilor din lista din lib/books.ts.
   const tabCarte = areAccesLaCarte(profile.id) ? [{ href: PAGINA_CARTII, label: 'Cartea' }] : []
   const nav  = baza.flatMap(item =>
-    item.href === '/curs' ? [item, tab7Etape, ...tabCarte] : [item]
+    item.href === '/curs' ? [item, tab7Etape, ...tabSomn, ...tabCarte] : [item]
   )
 
   const [unreadPrivate, setUnreadPrivate]     = useState(0)
