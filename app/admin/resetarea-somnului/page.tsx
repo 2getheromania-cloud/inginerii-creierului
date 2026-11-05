@@ -207,7 +207,7 @@ export default async function AdminResetareaSomnului() {
                   <td className="px-4 py-3 tabular-nums">
                     {r.testPrim === null ? '—' : r.testUltim === null ? r.testPrim : `${r.testPrim} → ${r.testUltim}`}
                   </td>
-                  <td className="px-4 py-3 tabular-nums">{r.zileJurnal} zile</td>
+                  <td className="px-4 py-3 tabular-nums">{r.zileJurnal} {r.zileJurnal === 1 ? 'zi' : 'zile'}</td>
                   <td className="px-4 py-3 tabular-nums">{r.procentBife === null ? '—' : `${r.procentBife}%`}</td>
                   <td className="px-4 py-3 tabular-nums">
                     {r.somnMediu === null ? '—' : `${r.somnMediu.toFixed(1).replace('.', ',')} / 5`}
